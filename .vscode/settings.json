@@ -4,6 +4,15 @@
         "unistd.h": "c",
         "netif.h": "c",
         "debug.h": "c",
-        "stdarg.h": "c"
+        "stdarg.h": "c",
+        "time.h": "c",
+        "clock_t.h": "c",
+        "worker.h": "c",
+        "msg_queue.h": "c",
+        "mempool.h": "c",
+        "thread.h": "c",
+        "list.h": "c",
+        "net_err.h": "c",
+        "exmsg.h": "c"
     },
 }

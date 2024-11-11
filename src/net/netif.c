@@ -1,11 +1,12 @@
 #include "include/netif.h"
 #include "thread.h"
-
+#include "include/exmsg.h"
 static DEFINE_THREAD_FUNC(receiver)
 {
     printf("receiver working......\n");
     while (1)
     {
+        exmsg_netif_to_msgq();
         sleep(1);
     }
     

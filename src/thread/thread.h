@@ -37,6 +37,7 @@ typedef sem_t semaphore_t;
 net_err_t semaphore_init(semaphore_t* sem,uint32_t count);
 net_err_t semaphore_destory(semaphore_t* sem);
 net_err_t wait(semaphore_t* sem);
+net_err_t time_wait(semaphore_t* sem, int timeout);
 net_err_t post(semaphore_t* sem);
 #endif
 

@@ -63,6 +63,7 @@ void list_insert_last(list_t *list, list_node_t *node) {
  * @param list 操作的链表
  * @return 链表的第一个结点
  */
+#include "debug.h"
 list_node_t* list_remove_first(list_t *list) {
     // 表项为空，返回空
     if (list_is_empty(list)) {
@@ -71,7 +72,11 @@ list_node_t* list_remove_first(list_t *list) {
 
     // 取第一个结点
     list_node_t * remove_node = list->first;
-
+    list_node_t* next = remove_node->next;
+    if(next->next == 0)
+    {
+        printf("next is null");
+    }
     // 将first往表尾移1个，跳过刚才移过的那个，如果没有后继，则first=0
     list->first = remove_node->next;
     if (list->first == (list_node_t *)0) {
@@ -79,7 +84,7 @@ list_node_t* list_remove_first(list_t *list) {
         list->last = (list_node_t*)0;
     } else {
         // 非最后一结点，将后继的前驱清0
-        remove_node->next->pre = (list_node_t *)0;
+        next->pre = (list_node_t *)0;
     }
 
     // 调整node自己，置0，因为没有后继结点
@@ -119,4 +124,11 @@ list_node_t * list_remove(list_t *list, list_node_t *remove_node) {
     remove_node->pre = remove_node->next = (list_node_t*)0;
     --list->count;
     return remove_node;
+}
+
+void list_destory(list_t *list)
+{
+    list->count = 0;
+    list->first = (list_node_t*)0;
+    list->last = (list_node_t*)0;
 }

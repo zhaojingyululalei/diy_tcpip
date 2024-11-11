@@ -118,14 +118,33 @@ void* thread_function(void* arg) {
 #include "net.h"
 #include "net/include/netif.h"
 #include "debug.h"
+#include "mempool.h"
+
+void pool_test(void)
+{
+    uint8_t buffer[1025*512];
+    mempool_t pool;
+    void* tmp[20];
+    mempool_init(&pool,buffer,1024,512);
+    for (int i = 0; i < 20; i++)
+    {
+        void* blk = mempool_alloc_blk(&pool,500);
+        tmp[i] = blk;
+        dbg_info("blk address is :%x. free list count is %d\n",(uint32_t)blk,mempool_freeblk_cnt(&pool));
+    }
+    for (int i = 0; i < 20; i++)
+    {
+        mempool_free_blk(&pool,tmp[i]);
+        dbg_info("free list count is %d\n",mempool_freeblk_cnt(&pool));
+    }
+}
 int main(int argc,char* argv[]) {
     net_init();
-    net_start();
+    net_start(); //协议栈开始工作，消息队列开始工作
     
-    netif_open();
-    dbg_error("hello\n");
-    dbg_warning("world\n");
-    dbg_info("haha\n");
+    netif_open(); //网卡收发线程开始工作
+    
+    
     while (1)
     {
         sleep(1);
