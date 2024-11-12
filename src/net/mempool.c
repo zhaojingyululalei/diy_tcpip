@@ -36,7 +36,7 @@ uint32_t mempool_freeblk_cnt(mempool_t *mempool)
 }
 
 /* 毫秒 */
-void *mempool_alloc_blk(mempool_t *mempool, int timeout)
+void* mempool_alloc_blk(mempool_t *mempool, int timeout)
 {
 
     void *ret;

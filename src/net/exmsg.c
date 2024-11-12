@@ -4,7 +4,7 @@
 #include "list.h"
 
 static exmsg_data_t* msg_tbl[MSGQ_TBL_MAX_LIMIT+1];
-static uint8_t msg_datas[MEMPOLL_CTL_MAX_LIMIT*(sizeof(list_node_t)+sizeof(exmsg_data_t))];
+static uint8_t msg_buf[MEMPOLL_CTL_MAX_LIMIT*(sizeof(list_node_t)+sizeof(exmsg_data_t))];
 
 static msgQ_t msg_queue;
 static mempool_t msg_pool;
@@ -15,7 +15,7 @@ net_err_t exmsg_init(void)
     net_err_t ret;
     ret = msgQ_init(&msg_queue,msg_tbl,MSGQ_TBL_MAX_LIMIT);
     CHECK_NET_ERR(ret);
-    ret = mempool_init(&msg_pool,(uint8_t*)msg_datas,MEMPOLL_CTL_MAX_LIMIT,sizeof(exmsg_data_t));
+    ret = mempool_init(&msg_pool,(uint8_t*)msg_buf,MEMPOLL_CTL_MAX_LIMIT,sizeof(exmsg_data_t));
     CHECK_NET_ERR(ret);
 
     dbg_info("msg queue && msg mempool init successful\n");

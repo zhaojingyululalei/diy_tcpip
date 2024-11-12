@@ -138,12 +138,27 @@ void pool_test(void)
         dbg_info("free list count is %d\n",mempool_freeblk_cnt(&pool));
     }
 }
+#include "include/package.h"
+void pkg_test(void)
+{
+    pkg_t *p = package_create(520);
+    printf("package toal:%d\n",p->total);
+    list_node_t *dnode = p->pkgdb_list.first;
+    while(dnode)
+    {
+        pkg_dblk_t *blk = list_node_parent(dnode,pkg_dblk_t,node);
+        printf("blk size:%d,offset:%d\n",blk->size,blk->offset);
+        dnode = dnode->next;
+    }
+
+    package_collect(p);
+}
 int main(int argc,char* argv[]) {
     net_init();
     net_start(); //协议栈开始工作，消息队列开始工作
     
     netif_open(); //网卡收发线程开始工作
-    
+    pkg_test();
     
     while (1)
     {

@@ -73,10 +73,7 @@ list_node_t* list_remove_first(list_t *list) {
     // 取第一个结点
     list_node_t * remove_node = list->first;
     list_node_t* next = remove_node->next;
-    if(next->next == 0)
-    {
-        printf("next is null");
-    }
+    
     // 将first往表尾移1个，跳过刚才移过的那个，如果没有后继，则first=0
     list->first = remove_node->next;
     if (list->first == (list_node_t *)0) {
