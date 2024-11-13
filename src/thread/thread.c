@@ -66,7 +66,12 @@ net_err_t unlock(lock_t* lk)
 net_err_t lock_init(lock_t* lk)
 {
     int ret;
-    ret = pthread_mutex_init(lk, NULL);
+    pthread_mutexattr_t attr;
+    pthread_mutexattr_init(&attr);
+    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE_NP);
+
+    ret = pthread_mutex_init(lk, &attr);
+    pthread_mutexattr_destroy(&attr);
     return ret==0?NET_ERR_OK:NET_ERR_SYS;
 }
 

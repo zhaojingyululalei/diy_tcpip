@@ -141,17 +141,49 @@ void pool_test(void)
 #include "include/package.h"
 void pkg_test(void)
 {
+    printf("create a pkg\n");
     pkg_t *p = package_create(520);
-    printf("package toal:%d\n",p->total);
-    list_node_t *dnode = p->pkgdb_list.first;
-    while(dnode)
-    {
-        pkg_dblk_t *blk = list_node_parent(dnode,pkg_dblk_t,node);
-        printf("blk size:%d,offset:%d\n",blk->size,blk->offset);
-        dnode = dnode->next;
-    }
+    package_show_info(p);
+    package_show_pool_info();
+
+    printf("pkg expand front  20\n");
+    package_expand_front(p,20);
+    package_show_info(p);
+    package_show_pool_info();
+
+    printf("pkg expand front  100\n");
+    package_expand_front(p,100);
+    package_show_info(p);
+    package_show_pool_info();
+
+    printf("pkg expand last 30\n");
+    package_expand_last(p,30);
+    package_show_info(p);
+    package_show_pool_info();
+
+    printf("pkg expand last 100\n");
+    package_expand_last(p,100);
+    package_show_info(p);
+    package_show_pool_info();
+
+    printf("add header size 4\n");
+    package_add_header(p,4);
+    package_show_info(p);
+    package_show_pool_info();
+
+    printf("add header size 20\n");
+    package_add_header(p,20);
+    package_show_info(p);
+    package_show_pool_info();
+    
+    printf("integrate header size 24");
+    package_integrate_header(p,24);
+    package_show_info(p);
+    package_show_pool_info();
+
 
     package_collect(p);
+    package_show_pool_info();
 }
 int main(int argc,char* argv[]) {
     net_init();

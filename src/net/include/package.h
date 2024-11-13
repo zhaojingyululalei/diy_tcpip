@@ -22,10 +22,18 @@ typedef struct _pkg_t{
 }pkg_t; 
 
 
+pkg_dblk_t* package_get_next_datablk(pkg_dblk_t* cur_blk);
+net_err_t package_remove_one_blk(pkg_t* package,pkg_dblk_t* delblk);
+net_err_t package_expand_front(pkg_t* package,int ex_size);
+net_err_t package_expand_last(pkg_t* package,int ex_size);
+net_err_t package_expand_front_align(pkg_t* package,int ex_size);
+
+net_err_t package_show_pool_info(void);
+net_err_t package_show_info(pkg_t *package);
 net_err_t package_pool_init(void);
 net_err_t package_pool_destory(void);
 net_err_t package_collect(pkg_t *package);
-pkg_t* package_create(int size);
-void package_destory(pkg_t *package);
-void package_datablk_destory(pkg_dblk_t *blk);
+pkg_t *package_create(int size);
+net_err_t package_add_header(pkg_t* package,int h_size);
+net_err_t package_integrate_header(pkg_t* package,int all_hsize);
 #endif
