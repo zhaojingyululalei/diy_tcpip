@@ -141,8 +141,31 @@ void pool_test(void)
 #include "include/package.h"
 void pkg_test(void)
 {
+    pkg_t* x = package_alloc(60);
+    package_show_info(x);
+    package_show_pool_info();
+
+    pkg_t* y = package_alloc(70);
+    package_show_info(y);
+    package_show_pool_info();
+
+    package_join(x,y);
+    package_show_info(y);
+    package_show_pool_info();
+
+    x = package_alloc(30);
+    package_show_info(x);
+    package_show_pool_info();
+
+    package_join(x,y);
+    package_show_info(y);
+    package_show_pool_info();
+
+
+
+
     printf("create a pkg\n");
-    pkg_t *p = package_create(520);
+    pkg_t *p = package_alloc(520);
     package_show_info(p);
     package_show_pool_info();
 
@@ -167,12 +190,12 @@ void pkg_test(void)
     package_show_pool_info();
 
     printf("add header size 4\n");
-    package_add_header(p,4);
+    package_add_headspace(p,4);
     package_show_info(p);
     package_show_pool_info();
 
     printf("add header size 20\n");
-    package_add_header(p,20);
+    package_add_headspace(p,20);
     package_show_info(p);
     package_show_pool_info();
     
@@ -181,6 +204,15 @@ void pkg_test(void)
     package_show_info(p);
     package_show_pool_info();
 
+    printf("pkg shrank front 60");
+    package_shrank_front(p,60);
+    package_show_info(p);
+    package_show_pool_info();
+
+    printf("pkg shrank last 60");
+    package_shrank_last(p,60);
+    package_show_info(p);
+    package_show_pool_info();
 
     package_collect(p);
     package_show_pool_info();

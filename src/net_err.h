@@ -1,6 +1,7 @@
 #ifndef __NET_ERR_H
 #define __NET_ERR_H
 #include "debug.h"
+#include <stdbool.h>
 typedef enum _net_err_t
 {
     NET_ERR_OK=0,

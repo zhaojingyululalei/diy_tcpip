@@ -129,3 +129,27 @@ void list_destory(list_t *list)
     list->first = (list_node_t*)0;
     list->last = (list_node_t*)0;
 }
+
+void list_join(list_t* from, list_t* to) {
+    // 如果 `from` 链表为空，直接返回
+    if (list_is_empty(from)) {
+        return;
+    }
+
+    
+    if (list_is_empty(to)) {
+        to->first = from->first;
+        to->last = from->last;
+        to->count = from->count;
+    } else {
+        // 否则，将 `from` 链表连接到 `to` 链表的末尾
+        to->last->next = from->first;
+        from->first->pre = to->last;
+        to->last = from->last;
+        to->count += from->count;
+    }
+
+    // 清空 `from` 链表
+    from->first = from->last = (list_node_t*)0;
+    from->count = 0;
+}

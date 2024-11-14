@@ -89,7 +89,7 @@ net_err_t package_collect(pkg_t *package)
     return NET_ERR_OK;
 }
 
-pkg_t *package_create(int size)
+pkg_t *package_alloc(int size)
 {
     net_err_t ret;
     pkg_t *package = mempool_alloc_blk(&pkg_pool, -1);
@@ -266,7 +266,7 @@ net_err_t package_show_info(pkg_t *package)
 /**
  * 给数据包添加包头
  */
-net_err_t package_add_header(pkg_t *package, int h_size)
+net_err_t package_add_headspace(pkg_t *package, int h_size)
 {
     return package_expand_front_align(package, h_size);
 }
@@ -283,17 +283,149 @@ pkg_dblk_t *package_get_next_datablk(pkg_dblk_t *cur_blk)
     unlock(&pkg_locker);
     return next_blk;
 }
+pkg_dblk_t *package_get_pre_datablk(pkg_dblk_t *cur_blk)
+{
+    lock(&pkg_locker);
+    list_node_t *pre_node = cur_blk->node.pre;
+    if (pre_node == NULL)
+    {
+        unlock(&pkg_locker);
+        return NULL;
+    }
+    pkg_dblk_t *pre_blk = list_node_parent(pre_node, pkg_dblk_t, node);
+    unlock(&pkg_locker);
+    return pre_blk;
+}
+
 net_err_t package_remove_one_blk(pkg_t *package, pkg_dblk_t *delblk)
 {
+    lock(&pkg_locker);
     if (package == NULL || delblk == NULL)
     {
+        unlock(&pkg_locker);
         return NET_ERR_SYS;
     }
     list_t *list = &package->pkgdb_list;
     list_node_t *delnode = &delblk->node;
     list_remove(list, delnode);
+    mempool_free_blk(&pkg_datapool, delblk);
+    unlock(&pkg_locker);
     return NET_ERR_OK;
 }
+
+pkg_dblk_t *package_get_first_datablk(pkg_t *package)
+{
+    lock(&pkg_locker);
+    list_t *list = &package->pkgdb_list;
+    list_node_t *fnode = list_first(list);
+    if (fnode == NULL)
+    {
+        unlock(&pkg_locker);
+        dbg_error("pkg has no blk\n");
+        return NULL;
+    }
+    else
+    {
+        unlock(&pkg_locker);
+        return list_node_parent(fnode, pkg_dblk_t, node);
+    }
+    unlock(&pkg_locker);
+    return NULL;
+}
+pkg_dblk_t *package_get_last_datablk(pkg_t *package)
+{
+    lock(&pkg_locker);
+    list_t *list = &package->pkgdb_list;
+    list_node_t *lnode = list_last(list);
+    if (lnode == NULL)
+    {
+        unlock(&pkg_locker);
+        dbg_error("pkg has no blk\n");
+        return NULL;
+    }
+    else
+    {
+        unlock(&pkg_locker);
+        return list_node_parent(lnode, pkg_dblk_t, node);
+    }
+    unlock(&pkg_locker);
+    return NULL;
+}
+
+net_err_t package_shrank_front(pkg_t *package, int sh_size)
+{
+    net_err_t ret;
+    lock(&pkg_locker);
+    if (sh_size > package->total)
+    {
+        unlock(&pkg_locker);
+        dbg_error("sh_size > pkg size");
+        return NET_ERR_SYS;
+    }
+    package->total -= sh_size;
+
+    pkg_dblk_t *fblk = package_get_first_datablk(package);
+    if (fblk->size > sh_size)
+    {
+        fblk->size -= sh_size;
+        fblk->offset += sh_size;
+    }
+    else if (fblk->size == sh_size)
+    {
+        ret = package_remove_one_blk(package, fblk);
+        if (ret != NET_ERR_OK)
+            dbg_warning("package remove one blk fail...\n");
+    }
+    else
+    {
+        int leave_sh_size = sh_size - fblk->size;
+        ret = package_remove_one_blk(package, fblk);
+        if (ret != NET_ERR_OK)
+            dbg_warning("package remove one blk fail...\n");
+        fblk = package_get_first_datablk(package);
+        fblk->size -= leave_sh_size;
+        fblk->offset += leave_sh_size;
+    }
+    unlock(&pkg_locker);
+    return NET_ERR_OK;
+}
+
+net_err_t package_shrank_last(pkg_t *package, int sh_size)
+{
+    net_err_t ret;
+    lock(&pkg_locker);
+    if (sh_size > package->total)
+    {
+        unlock(&pkg_locker);
+        dbg_error("sh_size > pkg size");
+        return NET_ERR_SYS;
+    }
+    package->total -= sh_size;
+
+    pkg_dblk_t *lblk = package_get_last_datablk(package);
+    if (lblk->size > sh_size)
+    {
+        lblk->size -= sh_size;
+    }
+    else if (lblk->size == sh_size)
+    {
+        ret = package_remove_one_blk(package, lblk);
+        if (ret != NET_ERR_OK)
+            dbg_warning("package remove one blk fail...\n");
+    }
+    else
+    {
+        int leave_sh_size = sh_size - lblk->size;
+        ret = package_remove_one_blk(package, lblk);
+        if (ret != NET_ERR_OK)
+            dbg_warning("package remove one blk fail...\n");
+        lblk = package_get_last_datablk(package);
+        lblk->size -= leave_sh_size;
+    }
+    unlock(&pkg_locker);
+    return NET_ERR_OK;
+}
+
 /**
  * 将所有数据包头整合到一个数据块中
  */
@@ -348,3 +480,68 @@ net_err_t package_integrate_header(pkg_t *package, int all_hsize)
     unlock(&pkg_locker);
     return NET_ERR_OK;
 }
+
+bool package_integrate_two_continue_blk(pkg_t *package, pkg_dblk_t *blk)
+{
+    net_err_t ret;
+    lock(&pkg_locker);
+    pkg_dblk_t *next = package_get_next_datablk(blk);
+    if (next == NULL)
+    {
+        unlock(&pkg_locker);
+        return false;
+    }
+    int both_size = blk->size + next->size;
+    if (both_size > PKG_DATA_BLK_SIZE)
+    {
+        unlock(&pkg_locker);
+        return false;
+    }
+
+    int i, j;
+    uint8_t *dest = blk->data;
+    uint8_t *src = blk->data + blk->offset;
+    blk->offset = 0;
+    blk->size += next->size;
+    for (i = 0; i < blk->size; i++)
+    {
+        dest[i] = src[i];
+    }
+    
+    src = next->data + next->offset;
+    
+    for (j = 0; j < next->size; j++, i++)
+    {
+        dest[i] = src[j];
+    }
+    
+    ret = package_remove_one_blk(package, next);
+    if(ret!=NET_ERR_OK)
+    {
+        dbg_warning("package remove one blk fail...\n");
+    }
+    unlock(&pkg_locker);
+    return true;
+}
+
+net_err_t package_join(pkg_t* from,pkg_t* to)
+{
+    lock(&pkg_locker);
+    to->total += from->total;
+    list_t* list_f = &from->pkgdb_list;
+    list_t* list_to = &to->pkgdb_list;
+    list_join(list_f,list_to);
+
+    package_collect(from);
+
+    pkg_dblk_t* curblk = package_get_first_datablk(to);
+    while(curblk)
+    {
+        package_integrate_two_continue_blk(to,curblk);
+        curblk = package_get_next_datablk(curblk);
+    }
+    unlock(&pkg_locker);
+    return NET_ERR_OK;
+
+}
+
