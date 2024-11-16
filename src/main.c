@@ -217,12 +217,43 @@ void pkg_test(void)
     package_collect(p);
     package_show_pool_info();
 }
+void pkg_io_test(void)
+{
+    pkg_t* x = package_alloc(60);
+    package_lseek(x,0);
+    package_show_info(x);
+    package_show_pool_info();
+
+    pkg_t* y = package_alloc(70);
+    package_lseek(y,0);
+    package_show_info(y);
+    package_show_pool_info();
+
+    package_join(x,y);
+    package_show_info(y);
+    package_show_pool_info();
+
+    char tmp[130]={0};
+    char buf[130]={0};
+    for (int i = 0; i < 130; i++)
+    {
+        buf[i] = i%10;
+    }
+    package_write(y,buf,130);
+    package_lseek(y,70);
+
+    package_read(y,tmp,60);
+    return;
+
+    
+}
 int main(int argc,char* argv[]) {
     net_init();
     net_start(); //协议栈开始工作，消息队列开始工作
     
     netif_open(); //网卡收发线程开始工作
     pkg_test();
+    pkg_io_test();
     
     while (1)
     {

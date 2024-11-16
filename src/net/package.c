@@ -431,117 +431,426 @@ net_err_t package_shrank_last(pkg_t *package, int sh_size)
  */
 net_err_t package_integrate_header(pkg_t *package, int all_hsize)
 {
-    if (all_hsize > PKG_DATA_BLK_SIZE)
-    {
-        dbg_error("header size greater than data block size!\n");
+    if (package == NULL || all_hsize <= 0 || all_hsize > package->total) {
+        dbg_error("Invalid package or header size!\n");
+        return NET_ERR_SYS; // 参数校验
+    }
+
+    if (all_hsize > PKG_DATA_BLK_SIZE) {
+        dbg_error("Header size greater than data block size!\n");
         return NET_ERR_SYS;
     }
+
     lock(&pkg_locker);
+
     list_node_t *fnode = list_first(&package->pkgdb_list);
+    if (fnode == NULL) {
+        unlock(&pkg_locker);
+        dbg_error("Package data block list is empty!\n");
+        return NET_ERR_SYS; // 空包检查
+    }
+
     pkg_dblk_t *fblk = list_node_parent(fnode, pkg_dblk_t, node);
-    if (fblk->size >= all_hsize)
-    {
+
+    // 如果第一个数据块足够容纳所有头数据，无需整合
+    if (fblk->size >= all_hsize) {
         unlock(&pkg_locker);
         return NET_ERR_OK;
     }
-    else
-    {
-        int i, j;
-        uint8_t *dest = fblk->data;
-        uint8_t *src = fblk->data + fblk->offset;
-        for (i = 0; i < fblk->size; i++)
-        {
-            dest[i] = src[i];
-        }
-        pkg_dblk_t *next = package_get_next_datablk(fblk);
-        if (next == NULL)
-        {
-            unlock(&pkg_locker);
-            dbg_error("header size may be not correct\n");
-            return NET_ERR_SYS;
-        }
-        src = next->data + next->offset;
-        int leave = all_hsize - i;
-        next->size -= leave;
-        next->offset += leave;
 
-        for (j = 0; j < leave; j++, i++)
-        {
-            dest[i] = src[j];
-        }
+    uint8_t *dest = fblk->data;              // 目标位置
+    uint8_t *src = fblk->data + fblk->offset; // 当前块的起始位置
+    int copied = fblk->size;                 // 已复制的数据大小
 
-        if (next->size == 0)
-        {
-            package_remove_one_blk(package, next);
-        }
-        fblk->offset = 0;
-        fblk->size += leave;
+    if (copied > 0) {
+        memmove(dest, src, copied);          // 利用 memmove 处理重叠区域
     }
+
+    pkg_dblk_t *next = package_get_next_datablk(fblk);
+    if (next == NULL) {
+        unlock(&pkg_locker);
+        dbg_error("Header size may be incorrect, not enough data blocks!\n");
+        return NET_ERR_SYS;
+    }
+
+    // 从下一个数据块中补充剩余的头数据
+    int remaining = all_hsize - copied;      // 需要补充的数据量
+    src = next->data + next->offset;
+
+    if (remaining > next->size) {
+        remaining = next->size;              // 防止越界
+    }
+
+    memcpy(dest + copied, src, remaining);   // 将下一块数据复制到目标位置
+
+    next->offset += remaining;              // 更新下一个块的偏移和大小
+    next->size -= remaining;
+    fblk->size = all_hsize;                 // 更新第一个块的大小
+    fblk->offset = 0;
+
+    // 如果下一个数据块已空，移除它
+    if (next->size == 0) {
+        package_remove_one_blk(package, next);
+    }
+
     unlock(&pkg_locker);
+
     return NET_ERR_OK;
 }
 
+
 bool package_integrate_two_continue_blk(pkg_t *package, pkg_dblk_t *blk)
 {
-    net_err_t ret;
-    lock(&pkg_locker);
-    pkg_dblk_t *next = package_get_next_datablk(blk);
-    if (next == NULL)
-    {
-        unlock(&pkg_locker);
-        return false;
-    }
-    int both_size = blk->size + next->size;
-    if (both_size > PKG_DATA_BLK_SIZE)
-    {
-        unlock(&pkg_locker);
+    if (package == NULL || blk == NULL) {
+        dbg_error("Invalid package or block!\n");
         return false;
     }
 
-    int i, j;
-    uint8_t *dest = blk->data;
-    uint8_t *src = blk->data + blk->offset;
-    blk->offset = 0;
-    blk->size += next->size;
-    for (i = 0; i < blk->size; i++)
-    {
-        dest[i] = src[i];
+    lock(&pkg_locker);
+
+    pkg_dblk_t *next = package_get_next_datablk(blk);
+    if (next == NULL) {
+        unlock(&pkg_locker);
+        return false; 
     }
-    
-    src = next->data + next->offset;
-    
-    for (j = 0; j < next->size; j++, i++)
-    {
-        dest[i] = src[j];
+
+    int both_size = blk->size + next->size;
+    if (both_size > PKG_DATA_BLK_SIZE) {
+        unlock(&pkg_locker);
+        return false; 
     }
-    
-    ret = package_remove_one_blk(package, next);
-    if(ret!=NET_ERR_OK)
-    {
-        dbg_warning("package remove one blk fail...\n");
+
+    // 使用 memcpy 替代手动拷贝
+    memmove(blk->data, blk->data + blk->offset, blk->size);
+    blk->offset = 0; // 重置偏移
+    blk->size = both_size; // 更新总大小
+
+    memcpy(blk->data + blk->size, next->data + next->offset, next->size);
+
+    // 移除 next 数据块
+    if (package_remove_one_blk(package, next) != NET_ERR_OK) {
+        dbg_warning("Failed to remove the next block\n");
     }
+
     unlock(&pkg_locker);
     return true;
 }
 
-net_err_t package_join(pkg_t* from,pkg_t* to)
+
+net_err_t package_join(pkg_t *from, pkg_t *to)
 {
+    if (from == NULL || to == NULL) {
+        return NET_ERR_SYS;
+    }
+
     lock(&pkg_locker);
+
+    // 合并两包的总大小
     to->total += from->total;
-    list_t* list_f = &from->pkgdb_list;
-    list_t* list_to = &to->pkgdb_list;
-    list_join(list_f,list_to);
 
-    package_collect(from);
+    // 合并链表
+    list_t *list_f = &from->pkgdb_list;
+    list_t *list_to = &to->pkgdb_list;
+    list_join(list_f, list_to);
 
-    pkg_dblk_t* curblk = package_get_first_datablk(to);
-    while(curblk)
-    {
-        package_integrate_two_continue_blk(to,curblk);
+    // 清理 from 的内容
+    if (package_collect(from) != NET_ERR_OK) {
+        unlock(&pkg_locker);
+        dbg_warning("Failed to clean the source package\n");
+        return NET_ERR_SYS;
+    }
+
+    // 整合目标包的数据块
+    pkg_dblk_t *curblk = package_get_first_datablk(to);
+    while (curblk) {
+        package_integrate_two_continue_blk(to, curblk);
         curblk = package_get_next_datablk(curblk);
     }
+
     unlock(&pkg_locker);
     return NET_ERR_OK;
-
 }
 
+
+
+
+net_err_t package_write(pkg_t *package, uint8_t *buf, int len)
+{
+    lock(&pkg_locker);
+    if (package == NULL || buf == NULL || len > package->total) {
+        unlock(&pkg_locker);
+        return NET_ERR_SYS; 
+    }
+
+
+    pkg_dblk_t *curk = package->curblk;
+    if (curk == NULL || package->inner_offset >= curk->size) {
+        unlock(&pkg_locker); 
+        return NET_ERR_SYS; 
+    }
+
+    uint8_t *src = buf;
+    int remaining_len = len;
+    int write_size = curk->size - package->inner_offset;
+
+    while (remaining_len > 0) {
+        if (curk == NULL) {
+            unlock(&pkg_locker); 
+            return NET_ERR_SYS; 
+        }
+
+        uint8_t *dest = &curk->data[curk->offset + package->inner_offset];
+        if (write_size > remaining_len) {
+            write_size = remaining_len; 
+        }
+
+        memcpy(dest, src, write_size);
+        src += write_size;
+        remaining_len -= write_size;
+
+        if (remaining_len > 0) { 
+            curk = package_get_next_datablk(curk);
+            package->curblk = curk;
+            package->inner_offset = 0;
+            write_size = curk ? curk->size : 0;
+        } else {
+            package->inner_offset += write_size; 
+        }
+    }
+
+    package->pos += len; // 总写入位置更新
+    unlock(&pkg_locker);
+
+    return NET_ERR_OK;
+}
+
+net_err_t package_read(pkg_t *package, uint8_t *buf, int len)
+{
+    lock(&pkg_locker);
+    if (package == NULL || buf == NULL || len <= 0) {
+        unlock(&pkg_locker);
+        return NET_ERR_SYS; 
+    }
+
+
+    if (package->pos + len > package->total) {
+        unlock(&pkg_locker);
+        return NET_ERR_SYS; // 防止读取超出总长度
+    }
+
+    pkg_dblk_t *curk = package->curblk;
+    if (curk == NULL || package->inner_offset >= curk->size) {
+        unlock(&pkg_locker);
+        return NET_ERR_SYS; // 数据块检查
+    }
+
+    uint8_t *dest = buf;
+    int remaining_len = len;
+    int read_size = curk->size - package->inner_offset;
+
+    while (remaining_len > 0) {
+        if (curk == NULL) {
+            unlock(&pkg_locker);
+            return NET_ERR_SYS; // 数据块耗尽
+        }
+
+        if (read_size > remaining_len) {
+            read_size = remaining_len; // 当前块能读取的大小
+        }
+
+        memcpy(dest, &curk->data[curk->offset + package->inner_offset], read_size);
+        dest += read_size;
+        remaining_len -= read_size;
+
+        if (remaining_len > 0) { // 读取完当前块，切换到下一块
+            curk = package_get_next_datablk(curk);
+            package->curblk = curk;
+            package->inner_offset = 0;
+            read_size = curk ? curk->size : 0;
+        } else {
+            package->inner_offset += read_size; // 更新块内偏移
+        }
+    }
+
+    package->pos += len; // 总读取位置更新
+    unlock(&pkg_locker);
+
+    return NET_ERR_OK;
+}
+
+net_err_t package_lseek(pkg_t *package, int offset)
+{
+    lock(&pkg_locker);
+    if (package == NULL || offset < 0 || offset > package->total) {
+        unlock(&pkg_locker);
+        return NET_ERR_SYS; 
+    }
+
+
+    pkg_dblk_t *curk = package_get_first_datablk(package); // 从链表头开始查找
+    int cumulative_offset = 0;
+
+    while (curk) {
+        if (cumulative_offset + curk->size > offset) {
+            package->curblk = curk;
+            package->inner_offset = offset - cumulative_offset;
+            package->pos = offset;
+            unlock(&pkg_locker);
+            return NET_ERR_OK;
+        }
+
+        cumulative_offset += curk->size;
+        curk = curk->node.next;
+    }
+
+    unlock(&pkg_locker);
+    return NET_ERR_SYS; // 未找到合适位置
+}
+
+net_err_t package_memcpy(pkg_t *dest_pkg, int dest_offset, pkg_t *src_pkg, int src_offset, int len)
+{
+    if (dest_pkg == NULL || src_pkg == NULL || len <= 0) {
+        return NET_ERR_SYS; 
+    }
+
+    lock(&pkg_locker);
+
+   
+    if (src_offset < 0 || src_offset + len > src_pkg->total ||
+        dest_offset < 0 || dest_offset + len > dest_pkg->total) {
+        unlock(&pkg_locker);
+        return NET_ERR_SYS;
+    }
+
+    
+    uint8_t *buffer = (uint8_t *)malloc(len);
+    if (buffer == NULL) {
+        unlock(&pkg_locker);
+        return NET_ERR_SYS; 
+    }
+
+
+   
+    if (package_lseek(src_pkg, src_offset) != NET_ERR_OK) {
+        free(buffer);
+        unlock(&pkg_locker);
+        return NET_ERR_SYS;
+    }
+
+    if (package_read(src_pkg, buffer, len) != NET_ERR_OK) {
+        free(buffer);
+        unlock(&pkg_locker);
+        return NET_ERR_SYS;
+    }
+
+    if (package_lseek(dest_pkg, dest_offset) != NET_ERR_OK) {
+        free(buffer);
+        unlock(&pkg_locker);
+        return NET_ERR_SYS;
+    }
+
+    if (package_write(dest_pkg, buffer, len) != NET_ERR_OK) {
+        free(buffer);
+        unlock(&pkg_locker);
+        return NET_ERR_SYS;
+    }
+
+    free(buffer);
+    unlock(&pkg_locker);
+
+    return NET_ERR_OK;
+}
+
+net_err_t package_memset(pkg_t *package, int offset, uint8_t value, int len)
+{
+    if (package == NULL || offset < 0 || len <= 0 || offset + len > package->total) {
+        return NET_ERR_SYS; 
+    }
+
+    lock(&pkg_locker);
+
+   
+    if (package_lseek(package, offset) != NET_ERR_OK) {
+        unlock(&pkg_locker);
+        return NET_ERR_SYS;
+    }
+
+    int remaining_len = len;
+    pkg_dblk_t *curblk = package->curblk;
+    if (curblk == NULL) {
+        unlock(&pkg_locker);
+        return NET_ERR_SYS; 
+    }
+
+    uint8_t *dest = &curblk->data[curblk->offset + package->inner_offset];
+    int write_size = curblk->size - package->inner_offset;
+
+    while (remaining_len > 0) {
+        if (curblk == NULL) {
+            unlock(&pkg_locker);
+            return NET_ERR_SYS; 
+        }
+
+        if (write_size > remaining_len) {
+            write_size = remaining_len;
+        }
+
+        memset(dest, value, write_size);
+        remaining_len -= write_size;
+
+        if (remaining_len > 0) { 
+            curblk = package_get_next_datablk(curblk);
+            package->curblk = curblk;
+            package->inner_offset = 0;
+            dest = curblk ? &curblk->data[curblk->offset] : NULL;
+            write_size = curblk ? curblk->size : 0;
+        } else {
+            package->inner_offset += write_size;
+        }
+    }
+
+    package->pos = offset + len; 
+    unlock(&pkg_locker);
+
+    return NET_ERR_OK;
+}
+
+pkg_t*  package_create(uint8_t* data_buf,int len)
+{
+    net_err_t ret;
+    if(data_buf == NULL) return NULL;
+    pkg_t* pkg = package_alloc(len);
+    if(pkg == NULL)
+    {
+        return NULL;
+    }
+    ret = package_lseek(pkg,0);
+    if(ret != NET_ERR_OK)
+    {
+        package_collect(pkg);
+        return NULL;
+    }
+    ret = package_write(pkg,data_buf,len);
+    if(ret != NET_ERR_OK)
+    {
+        package_collect(pkg);
+        return NULL;
+    }
+    return pkg;
+}
+
+net_err_t package_add_header(pkg_t* package,uint8_t* head_buf,int head_len)
+{
+    if(package==NULL||head_buf==NULL)
+    {
+        return NET_ERR_SYS;
+    }
+    net_err_t ret;
+    ret = package_add_headspace(package,head_len);
+    CHECK_NET_ERR(ret);
+    ret = package_lseek(package,0);
+    CHECK_NET_ERR(ret);
+    ret = package_write(package,head_buf,head_len);
+    CHECK_NET_ERR(ret);
+    return NET_ERR_OK;
+}

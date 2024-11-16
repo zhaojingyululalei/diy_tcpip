@@ -11,7 +11,7 @@
 typedef struct _pkg_dblk_t{
     list_node_t node;
     int size;
-    int offset;
+    int offset; //数据块起始地址偏移
     uint8_t data[PKG_DATA_BLK_SIZE];
 }pkg_dblk_t;
 
@@ -19,6 +19,11 @@ typedef struct _pkg_t{
     int total;
     list_t pkgdb_list;
     list_node_t node;   //有些数据包是兄弟包，有关联的
+
+    int pos;
+    pkg_dblk_t* curblk;
+    int inner_offset; //数据块快内偏移
+
 }pkg_t; 
 
 
@@ -35,15 +40,23 @@ net_err_t package_shrank_last(pkg_t* package,int sh_size);
 
 
 
+net_err_t package_collect(pkg_t *package);
+pkg_t *package_alloc(int size);
+net_err_t package_add_headspace(pkg_t* package,int h_size);
+bool package_integrate_two_continue_blk(pkg_t *package, pkg_dblk_t *blk);
+
+//user
 net_err_t package_show_pool_info(void);
 net_err_t package_show_info(pkg_t *package);
 net_err_t package_pool_init(void);
 net_err_t package_pool_destory(void);
-net_err_t package_collect(pkg_t *package);
-pkg_t *package_alloc(int size);
-net_err_t package_add_headspace(pkg_t* package,int h_size);
 net_err_t package_integrate_header(pkg_t* package,int all_hsize);
-bool package_integrate_two_continue_blk(pkg_t *package, pkg_dblk_t *blk);
 net_err_t package_join(pkg_t* from,pkg_t* to);
-
+net_err_t package_write(pkg_t *package, uint8_t *buf, int len);
+net_err_t package_read(pkg_t *package, uint8_t *buf, int len);
+net_err_t package_lseek(pkg_t *package, int offset);
+net_err_t package_memset(pkg_t *package, int offset, uint8_t value, int len);
+net_err_t package_memcpy(pkg_t *dest_pkg, int dest_offset, pkg_t *src_pkg, int src_offset, int len);
+pkg_t*  package_create(uint8_t* data_buf,int len);
+net_err_t package_add_header(pkg_t* package,uint8_t* head_buf,int head_len);
 #endif
