@@ -247,14 +247,46 @@ void pkg_io_test(void)
 
     
 }
-int main(int argc,char* argv[]) {
+
+void ipaddr_test()
+{
+    ipaddr_t ipaddr,mask;
+    parse_ipaddr("127.0.0.1",&ipaddr);
+    parse_ipaddr("255.0.0.0",&mask);
+    for (int i = 0; i < 4; i++)
+    {
+        printf("%d.",ipaddr.a_addr[i]);
+    }
+    printf("\n");
+    
+}
+#include "include/loop.h"
+
+void loop_netif_test(void)
+{
     net_init();
-    net_start(); //协议栈开始工作，消息队列开始工作
+    ipaddr_t ip,mask;
+    parse_ipaddr("127.0.0.2",&ip);
+    parse_ipaddr("255.0.0.0",&mask);
+    lo_netif_t loop1;
+    lo_netif_t loop2;
+    lo_open(&loop1,"lo1",NULL);
+    lo_open(&loop2,"lo2",NULL);
+    lo_set_ipaddr(&loop2,&ip,&mask,NULL);
+    lo_active(&loop1);
+    lo_active(&loop2);
+
+    netif_show_list_info();
+    lo_deactive(&loop1);
+    lo_close(&loop1);
+    lo_deactive(&loop2);
+    lo_close(&loop2);
+    netif_show_list_info();
+    return;
+}
+int main(int argc,char* argv[]) {
     
-    netif_open(); //网卡收发线程开始工作
-    pkg_test();
-    pkg_io_test();
-    
+    loop_netif_test();
     while (1)
     {
         sleep(1);

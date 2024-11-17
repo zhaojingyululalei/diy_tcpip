@@ -23,4 +23,5 @@ net_err_t msgQ_init(msgQ_t* mq,void** q,int capacity);
 net_err_t msgQ_destory(msgQ_t* mq);
 net_err_t msgQ_enqueue(msgQ_t* mq,void* message,int timeout);
 void* msgQ_dequeue(msgQ_t* mq,int timeout);
+bool msgQ_empty(msgQ_t* mq);
 #endif

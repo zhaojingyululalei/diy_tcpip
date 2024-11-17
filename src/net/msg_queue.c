@@ -1,5 +1,6 @@
 #include "include/msg_queue.h"
 #include "thread.h"
+#include "msg_queue.h"
 
 
 
@@ -69,7 +70,8 @@ void* msgQ_dequeue(msgQ_t* mq,int timeout)
     return message;
 }
 
+bool msgQ_empty(msgQ_t *mq)
+{
 
-
-
-
+    return mq->size == 0?true:false;
+}
