@@ -1,15 +1,14 @@
-#include "mempool.h"
-#include <string.h>
+#include "mmpool.h"
 
 // 初始化内存池
-net_err_t mempool_init(mempool_t *mempool, uint8_t *bf, int block_limit, int block_size)
+int mempool_init(mempool_t *mempool, uint8_t *bf, int block_limit, int block_size)
 {
     if (!mempool || block_limit <= 0)
-        return NET_ERR_SYS;
+        return -1;
 
     mempool->buffer = bf;
     if (!mempool->buffer)
-        return NET_ERR_SYS;
+        return -1;
 
     list_init(&mempool->free_list);
     lock_init(&mempool->locker);
@@ -22,7 +21,7 @@ net_err_t mempool_init(mempool_t *mempool, uint8_t *bf, int block_limit, int blo
         list_insert_last(&mempool->free_list, node);
     }
 
-    return NET_ERR_OK;
+    return 0;
 }
 
 // 获取空闲块计数
@@ -50,13 +49,13 @@ void* mempool_alloc_blk(mempool_t *mempool, int timeout)
     }
     else
     { // 暂时没有空闲内存块
-        if (timeout <= 0)
+        if (timeout < 0)
         {
             return NULL; // 不用等待，直接返回
         }
         else
         {
-            if (time_wait(&mempool->block, timeout) == NET_ERR_OK)
+            if (time_wait(&mempool->block, timeout) == 0)
             {
                 lock(&mempool->locker);
                 list_node_t *fnode = list_remove_first(&mempool->free_list);
@@ -71,22 +70,21 @@ void* mempool_alloc_blk(mempool_t *mempool, int timeout)
 }
 
 // 释放内存块
-net_err_t mempool_free_blk(mempool_t *mempool, void *block)
+int mempool_free_blk(mempool_t *mempool, void *block)
 {
     if (!block)
     {
-        return NET_ERR_OK;
+        return 0;
     }
 
     list_node_t* node = (list_node_t*)block-1;
-    dbg_info("memblk_node addr %x free\n", (uint32_t)node);
     lock(&mempool->locker);
     list_insert_last(&mempool->free_list, node);
     unlock(&mempool->locker);
 
     post(&mempool->block);
 
-    return NET_ERR_OK;
+    return 0;
 }
 
 // 销毁内存池

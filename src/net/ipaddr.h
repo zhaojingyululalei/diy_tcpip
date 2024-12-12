@@ -1,9 +1,8 @@
 #ifndef __IPADDR_H
 #define __IPADDR_H
-
-#include <stdint.h>
+#include "types.h"
 #include "net_cfg.h"
-#include "net_err.h"
+#define IP_ARRAY_LEN    (IP_ADDR_SIZE/8)
 /**
  * @brief IP地址
  */
@@ -14,10 +13,9 @@ typedef struct _ipaddr_t {
 
     union {
         uint32_t q_addr;                        // 32位整体描述
-        uint8_t a_addr[IPV4_ADDR_SIZE];        // 数组描述
+        uint8_t a_addr[IP_ARRAY_LEN];        // 数组描述
     };
 }ipaddr_t;
 
-net_err_t parse_ipaddr(const char *ip_str, ipaddr_t *ip_addr);
-
+int ipaddr_s2n(const char *ip_str, ipaddr_t *ip_addr);
 #endif

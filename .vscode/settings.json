@@ -17,6 +17,15 @@
         "package.h": "c",
         "net_cfg.h": "c",
         "stdint.h": "c",
-        "internet": "c"
+        "internet": "c",
+        "executor": "c",
+        "mutex": "c",
+        "net_drive.h": "c",
+        "netif_info.h": "c",
+        "ipaddr.h": "c",
+        "threadpool.h": "c",
+        "types.h": "c",
+        "mmpool.h": "c",
+        "pkg_workbench.h": "c"
     },
 }

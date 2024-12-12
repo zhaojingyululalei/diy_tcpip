@@ -1,8 +1,7 @@
-#ifndef __MEMPOOL_H
-#define __MEMPOOL_H
-#include "thread.h"
+#ifndef __MMPOOL_H
+#define __MMPOOL_H
+#include "threadpool.h"
 #include "list.h"
-
 
 /*config*/
 #define MEM_BLK_SIZE    512
@@ -18,14 +17,10 @@ typedef struct _mempool_t {
 
 
 
-net_err_t mempool_init(mempool_t *mempool, uint8_t *bf, int block_limit, int block_size);
+int mempool_init(mempool_t *mempool, uint8_t *bf, int block_limit, int block_size);
 uint32_t mempool_freeblk_cnt(mempool_t *mempool);
 void *mempool_alloc_blk(mempool_t *mempool, int timeout);
-net_err_t mempool_free_blk(mempool_t *mempool, void *block);
+int mempool_free_blk(mempool_t *mempool, void *block);
 void mempool_destroy(mempool_t *mempool);
-
-
-
-
 
 #endif

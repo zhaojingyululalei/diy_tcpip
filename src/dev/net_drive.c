@@ -1,5 +1,6 @@
 
-#include "pnet.h"
+#include "net_drive.h"
+
 
 /**
  * 根据ip地址查找本地网络接口列表，找到相应的名称
@@ -69,7 +70,7 @@ int pcap_show_list(void) {
         pcap_freealldevs(pcapif_list);
         return -1;
     }
-
+    printf("******************************************\n");
     printf("net card list: \n");
 
     // 遍历所有的可用接口，输出其信息
@@ -106,6 +107,7 @@ int pcap_show_list(void) {
     }
 
     printf("no net card found, check system configuration\n");
+    printf("******************************************\n");
     return 0;
 }
 
@@ -177,7 +179,7 @@ pcap_t * pcap_device_open(const char* ip, const uint8_t* mac_addr) {
     char filter_exp[256];
     struct bpf_program fp;
     sprintf(filter_exp,
-        "(ether dst %02x:%02x:%02x:%02x:%02x:%02x or ether broadcast)",
+        "(ether dst %02x:%02x:%02x:%02x:%02x:%02x or ether broadcast) and (not ether src %02x:%02x:%02x:%02x:%02x:%02x)",
         mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5],
         mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
     if (pcap_compile(pcap, &fp, filter_exp, 0, net) == -1) {
@@ -189,4 +191,29 @@ pcap_t * pcap_device_open(const char* ip, const uint8_t* mac_addr) {
         return (pcap_t*)0;
     }
     return pcap;
+}
+#include "tools/debug.h"
+int pcap_recv_pkg(pcap_t * handler,  const uint8_t **pkg_data)
+{
+    int ret;
+    struct pcap_pkthdr * pkg_info;
+    ret = pcap_next_ex(handler,&pkg_info,pkg_data);
+    if(ret < 0)
+    {
+        dbg_error("pcap capture pkg fail\n");
+        return -1;
+    }
+    else if(ret == 0)
+    {
+        dbg_warning("pcap capture timeout\n");
+        return 0;
+    }else{
+        return pkg_info->len;
+    }
+}
+
+int pcap_send_pkg(pcap_t* handler,uint8_t* buffer,int size)
+{
+    int ret = pcap_inject(handler, buffer, size);
+    return ret;
 }

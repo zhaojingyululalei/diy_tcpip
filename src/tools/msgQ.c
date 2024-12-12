@@ -1,12 +1,7 @@
-#include "include/msg_queue.h"
-#include "thread.h"
-#include "msg_queue.h"
+#include "msgQ.h"
 
 
-
-
-
-net_err_t msgQ_init(msgQ_t* mq,void** q,int capacity)
+int msgQ_init(msgQ_t* mq,void** q,int capacity)
 {
     mq->capacity = capacity;
     mq->head = 0;
@@ -19,10 +14,10 @@ net_err_t msgQ_init(msgQ_t* mq,void** q,int capacity)
     semaphore_init(&mq->full,0);
     semaphore_init(&mq->empty,capacity);
 
-    return NET_ERR_OK;
+    return 0;
 }
 
-net_err_t msgQ_destory(msgQ_t* mq)
+int msgQ_destory(msgQ_t* mq)
 {
     mq->capacity = 0;
     mq->head = 0;
@@ -33,13 +28,17 @@ net_err_t msgQ_destory(msgQ_t* mq)
     lock_destory(&mq->locker);
     semaphore_destory(&mq->full);
     semaphore_destory(&mq->empty);
+    return 0;
 }
 
-net_err_t msgQ_enqueue(msgQ_t* mq,void* message,int timeout)
+int msgQ_enqueue(msgQ_t* mq,void* message,int timeout)
 {
-    net_err_t ret;
+    int ret;
     ret = time_wait(&mq->empty,timeout);
-    CHECK_NET_ERR(ret);
+    if(ret < 0)
+    {
+        return ret;
+    }
 
     lock(&mq->locker);
     mq->msg_que[mq->tail] = message;
@@ -48,15 +47,15 @@ net_err_t msgQ_enqueue(msgQ_t* mq,void* message,int timeout)
     unlock(&mq->locker);
 
     post(&mq->full);
-    return NET_ERR_OK;
+    return 0;
 }
 
 void* msgQ_dequeue(msgQ_t* mq,int timeout)
 {
     void* message = NULL;
-    net_err_t ret;
+    int ret;
     ret = time_wait(&mq->full,timeout);
-    if(ret!= NET_ERR_OK){
+    if(ret < 0){
         return NULL;
     }
 
@@ -70,8 +69,8 @@ void* msgQ_dequeue(msgQ_t* mq,int timeout)
     return message;
 }
 
-bool msgQ_empty(msgQ_t *mq)
+int msgQ_is_empty(msgQ_t *mq)
 {
 
-    return mq->size == 0?true:false;
+    return mq->size == 0;
 }
