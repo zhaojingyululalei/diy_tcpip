@@ -419,17 +419,29 @@ void test_package(void)
     package_pool_destory();
 }
 #include "networker.h"
+#include "net.h"
 void test_worker(void)
 {
-    networker_start();
+    net_system_init();
+    net_system_start();
+}
+#include "ipaddr.h"
+void test_ipaddr(void)
+{
+    char buf[16] = {0};
+    ipaddr_t ip;
+    ipaddr_s2n("192.168.1.25",&ip);
+    ipaddr_n2s(&ip,buf,16);
 }
 int main(int agrc, char *argv[])
 {
+    //test_drive();
     // test_threadpool();
     // test_locks();
     // test_semaphores();
     //test_mempool();
     //test_package();
+    //test_ipaddr();
     test_worker();
     return 0;
 }

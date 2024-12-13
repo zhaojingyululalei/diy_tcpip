@@ -1,7 +1,7 @@
 #include "networker.h"
 #include "pkg_workbench.h"
 #include "threadpool.h"
-static threadpool_t netthread_pool;
+
 // 数据包搬运工,采集网卡数据,放入工作台
 DEFINE_THREAD_FUNC(mover)
 {
@@ -31,15 +31,12 @@ DEFINE_THREAD_FUNC(worker)
     
 }
 
+#include "net.h"
+
 void networker_start(void)
 {
-    package_pool_init();
-
-    workbench_init();
-
-    threadpool_attr_t pool_attr;
-    pool_attr.threads_nr = THREADPOOL_THREADS_NR;
-    threadpool_init(&netthread_pool,&pool_attr);
+    
+    
 
     thread_create(&netthread_pool,worker,NULL);
     thread_create(&netthread_pool,mover,NULL);

@@ -41,3 +41,47 @@ int ipaddr_s2n(const char *ip_str, ipaddr_t *ip_addr)
     return 0; 
 }
 
+int ipaddr_n2s(const ipaddr_t *ip_addr, char *ip_str, size_t str_len) {
+    if (!ip_addr || !ip_str || str_len < 16) { 
+        return -1; 
+    }
+
+    if (ip_addr->type != IPADDR_V4) {
+        return -1; 
+    }
+
+    // Format the IP address as a string
+    int ret = snprintf(ip_str, str_len, "%d.%d.%d.%d",
+                       ip_addr->a_addr[3], ip_addr->a_addr[2],
+                       ip_addr->a_addr[1], ip_addr->a_addr[0]);
+    
+    // Check if snprintf was successful
+    if (ret < 0 || (size_t)ret >= str_len) {
+        return -1; 
+    }
+
+    return 0; 
+}
+/*主机小端对齐，网络大端对齐(低字节在高地址)*/
+uint8_t* h2n(const uint8_t* arr,int len)
+{
+    uint8_t* ret = malloc(len);
+    for (int i = 0; i < len; i++)
+    {
+        ret[i] = arr[len-1-i];
+    }
+    return ret;
+    
+}
+
+uint8_t* n2h(const uint8_t* arr,int len)
+{
+    uint8_t* ret = malloc(len);
+    for (int i = 0; i < len; i++)
+    {
+        ret[i] = arr[len-1-i];
+    }
+    return ret;
+    
+}
+

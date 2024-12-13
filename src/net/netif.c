@@ -1,5 +1,7 @@
 #include "netif.h"
-
+#include "mmpool.h"
+#include "debug.h"
+#include "net_drive.h"
 static uint8_t mac_addr_Host[6] = {0x0,0x0c,0x29,0x6e,0x06,0x0c};
 uint8_t* get_mac_addr(const char* name)
 {
@@ -9,3 +11,281 @@ uint8_t* get_mac_addr(const char* name)
     }
     return NULL;
 }
+
+/**/
+static mempool_t netif_pool;
+static netif_t netifs[NETIF_MAX_NR*(sizeof(netif_t)+sizeof(list_node_t))];
+static list_t netif_list;
+static lock_t netif_list_locker;
+void print_netif_list(void) {
+    list_node_t *current_node = list_first(&netif_list); // 获取链表的第一个节点
+
+    printf("Netif List:\n");
+    printf("---------------------------------------------------------------------------------\n");
+    printf("| ID   | Name          | Type       | IP           | MAC Address         |\n");
+    printf("|      |               |            | Gateway      |                    |\n");
+    printf("|      |               |            | Mask         |                    |\n");
+    printf("---------------------------------------------------------------------------------\n");
+
+    while (current_node) {
+        // 使用 list_node_parent 宏获取 netif_t 指针
+        netif_t *netif = list_node_parent(current_node, netif_t, node);
+
+        // 类型转换为字符串
+        const char *type_str = "Unknown";
+        switch (netif->info.type) {
+            case NETIF_TYPE_NONE: type_str = "None"; break;
+            case NETIF_TYPE_LOOP: type_str = "Loopback"; break;
+            case NETIF_TYPE_ETH:  type_str = "Ethernet"; break;
+        }
+
+        // 转换 IP 地址、网关和掩码为字符串
+        char ip_str[16], gateway_str[16], mask_str[16];
+        ipaddr_n2s(&netif->info.ipaddr, ip_str, sizeof(ip_str));
+        ipaddr_n2s(&netif->info.gateway, gateway_str, sizeof(gateway_str));
+        ipaddr_n2s(&netif->info.mask, mask_str, sizeof(mask_str));
+
+        // 格式化 MAC 地址为字符串
+        char mac_str[18];
+        snprintf(mac_str, sizeof(mac_str), "%02X:%02X:%02X:%02X:%02X:%02X",
+                 netif->macaddr[5], netif->macaddr[4], netif->macaddr[3],
+                 netif->macaddr[2], netif->macaddr[1], netif->macaddr[0]);
+
+        // 打印信息
+        printf("| %-4d | %-13s | %-10s | %-11s | %-17s |\n", netif->id, netif->info.name, type_str, ip_str, mac_str);
+        printf("|      |               |            | %-11s |                    |\n", gateway_str);
+        printf("|      |               |            | %-11s |                    |\n", mask_str);
+        printf("---------------------------------------------------------------------------------\n");
+
+        // 获取下一个节点
+        current_node = list_node_next(current_node);
+    }
+}
+void netif_init(void)
+{
+
+    mempool_init(&netif_pool,netifs,NETIF_MAX_NR,sizeof(netif_t));
+    list_init(&netif_list);
+    lock_init(&netif_list_locker);
+
+}
+void netif_destory(void)
+{
+    mempool_destroy(&netif_pool);
+    lock_destory(&netif_list_locker);
+    list_destory(&netif_list);
+}
+
+netif_t *netif_register(const netif_info_t *info, const netif_ops_t *ops, const void *ex_data)
+{
+    netif_t* netif = (netif_t*)mempool_alloc_blk(&netif_pool,-1);
+    netif_card_info_t *card =  get_one_net_card();
+    if(!netif)
+    {
+        dbg_warning("netif_pool out of memory\r\n");
+        return NULL;
+    }
+    netif->ex_data = ex_data;
+    netif->ops = ops;
+    //深拷贝info
+    memcpy(&netif->info,info,sizeof(netif_info_t));
+    free(info);
+    netif->id = card->id;
+    netif->mtu = 1500;
+    for (int i = 0; i < 6; i++)
+    {
+        netif->macaddr[i] = card->mac[i];
+    }
+    return netif;
+    
+}
+netif_t* netif_virtual_register(const netif_info_t* info,const netif_ops_t* ops,const void* ex_data)
+{
+    netif_t* netif = (netif_t*)mempool_alloc_blk(&netif_pool,-1);
+    memset(netif,0,sizeof(netif));
+    if(!netif)
+    {
+        dbg_warning("netif_pool out of memory\r\n");
+        return NULL;
+    }
+    netif->ex_data = ex_data;
+    netif->ops = ops;
+    //深拷贝info
+    memcpy(&netif->info,info,sizeof(netif_info_t));
+    free(info);
+    netif->id = PCAP_NETIF_DRIVE_ARR_MAX+list_count(&netif_list);
+    netif->mtu = 1500;
+    return netif;
+}
+int netif_free(netif_t* netif)
+{
+    int ret;
+    //如果是物理网卡
+    if(netif->id<PCAP_NETIF_DRIVE_ARR_MAX)
+    {
+        put_one_net_card(netif->id);
+    }
+    msgQ_destory(&netif->in_q);
+    msgQ_destory(&netif->out_q);
+    memset(netif,0,sizeof(netif_t));
+    ret = mempool_free_blk(&netif_pool,netif);
+    if(ret<0)
+    {
+        dbg_error("netif free fail\r\n");
+        return ret;
+    }
+    return 0;
+}
+
+
+int netif_add(netif_t* netif)
+{
+    lock(&netif_list_locker);
+    list_insert_last(&netif_list,&netif->node);
+    unlock(&netif_list_locker);
+    return 0;
+}
+
+netif_t* netif_remove(netif_t* netif)
+{
+    lock(&netif_list_locker);
+    list_t* list = &netif_list;
+    list_node_t* cur = list->first;
+    while(cur)
+    {
+        if(cur == &netif->node)
+        {
+            list_remove(list,cur);
+            unlock(&netif_list_locker);
+            return netif;
+        }
+        cur = cur->next;
+    }
+    unlock(&netif_list_locker);
+    return NULL;
+}
+
+int netif_open(netif_t *netif, void *ex_data)
+{
+    netif->state = NETIF_OPEN;
+    int ret;
+    msgQ_init(&netif->in_q,netif->in_q_buf,NETIF_INQ_BUF_MAX);
+    msgQ_init(&netif->out_q,netif->out_q_buf,NETIF_OUTQ_BUF_MAX);
+    //将loop网卡加入链表
+    ret = netif_add(netif);
+    if(ret<0)
+    {
+        msgQ_destory(&netif->in_q);
+        msgQ_destory(&netif->out_q);
+        dbg_error("netif list insert fail\r\n");
+        return ret;
+    }
+    return 0;
+}
+
+int netif_activate(netif_t *netif)
+{
+    if(!netif)
+    {
+        dbg_error("empty netif,can not activate\r\n");
+        return -1;
+    }
+    if(netif->state!=NETIF_OPEN)
+    {
+        dbg_error("netif state is wrong,can not activate\r\n");
+        return -2;
+    }
+    netif->state = NETIF_ACTIVe;
+
+
+}
+
+int netif_shutdown(netif_t* netif)
+{
+    if(!netif)
+    {
+        dbg_error("empty netif,can not activate\r\n");
+        return -1;
+    }
+    if(netif->state!=NETIF_ACTIVe)
+    {
+        dbg_error("netif state is wrong,can not shutdown\r\n");
+        return -2;
+    }
+    int ret;
+    netif->state = NETIF_DIE;
+
+    while(!msgQ_is_empty(&netif->in_q))
+    {
+        pkg_t* pkg =(pkg_t*)msgQ_dequeue(&netif->in_q,-1);
+        ret = package_collect(pkg);
+        if(ret < 0)
+        {
+            dbg_warning("collect pkg fail\r\n");
+        }
+    }
+
+    while(!msgQ_is_empty(&netif->out_q))
+    {
+        pkg_t* pkg = (pkg_t*)msgQ_dequeue(&netif->out_q,-1);
+        package_collect(pkg);
+        if(ret < 0)
+        {
+            dbg_warning("collect pkg fail\r\n");
+        }
+    }
+    return 0;
+
+}
+
+int netif_set_ipaddr(netif_t* netif, const ipaddr_t* ipaddr) {
+    if (!netif || !ipaddr) {
+        return -1; // 参数无效
+    }
+    netif->info.ipaddr = *ipaddr; // 赋值 IP 地址
+    return 0; // 成功
+}
+int netif_set_gateway(netif_t* netif, const ipaddr_t* gateway) {
+    if (!netif || !gateway) {
+        return -1; // 参数无效
+    }
+    netif->info.gateway = *gateway; // 赋值网关地址
+    return 0; // 成功
+}
+int netif_set_mask(netif_t* netif, const ipaddr_t* mask) {
+    if (!netif || !mask) {
+        return -1; // 参数无效
+    }
+    netif->info.mask = *mask; // 赋值子网掩码
+    return 0; // 成功
+}
+int netif_set_mtu(netif_t* netif, int mtu) {
+    if (!netif || mtu <= 0) {
+        return -1; // 参数无效
+    }
+    netif->mtu = mtu; // 设置 MTU
+    return 0; // 成功
+}
+int netif_set_name(netif_t* netif, const char* name) {
+    if (!netif || !name) {
+        return -1; // 参数无效
+    }
+    size_t len = strlen(name);
+    if (len >= NETIF_NAME_STR_MAX_LEN) {
+        return -1; // 名称过长
+    }
+    strncpy(netif->info.name, name, NETIF_NAME_STR_MAX_LEN - 1); // 拷贝名称
+    netif->info.name[NETIF_NAME_STR_MAX_LEN - 1] = '\0'; // 确保以 '\0' 结尾
+    return 0; // 成功
+}
+
+int netif_set_mac(netif_t* netif,const uint8_t* mac)
+{
+    if(!netif||!mac)
+    {
+        return -1;
+    }
+    memcpy(netif->macaddr,mac,6);
+    return 0;
+}
+

@@ -26,6 +26,7 @@
         "threadpool.h": "c",
         "types.h": "c",
         "mmpool.h": "c",
-        "pkg_workbench.h": "c"
+        "pkg_workbench.h": "c",
+        "loop.h": "c"
     },
 }

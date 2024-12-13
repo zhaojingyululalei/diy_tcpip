@@ -15,6 +15,13 @@
 
 //工作台容量
 #define WORKBENCH_STUFF_CAPCITY 50
+//整个网络线程池，最大线程数量
 #define THREADPOOL_THREADS_NR   20
+//最大网卡数量
+#define NETIF_MAX_NR    20
+
+#define NETIF_LOOP_IPADDR   "127.0.0.1"
+#define NETIF_LOOP_MASK     "255.255.255.0"
+
 
 #endif
