@@ -27,6 +27,7 @@
         "types.h": "c",
         "mmpool.h": "c",
         "pkg_workbench.h": "c",
-        "loop.h": "c"
+        "loop.h": "c",
+        "networker.h": "c"
     },
 }

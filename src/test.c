@@ -416,6 +416,18 @@
 #include "pkg_workbench.h"
 #include "threadpool.h"
 #include "loop.h"
+#include "net.h"
+DEFINE_THREAD_FUNC(app)
+{
+    while (1)
+    {
+        // 这里模拟应用程序不断向workbench发送数据包
+        char *tmp = "app test";
+        pkg_t *app_pkg = package_create(tmp, strlen(tmp));
+        workbench_put_stuff(app_pkg);
+        sleep(20); // 主进程不退出，子线程都是死循环，回收不了
+    }
+}
 void test_worker(void)
 {
     net_system_init();
@@ -426,14 +438,19 @@ void test_worker(void)
     print_netif_list();
     netif_activate(netif);
 
+    thread_create(&netthread_pool,app,NULL);
+    sleep(3);
+    netif_shutdown(netif); //主线程等在回收recv线程那里，卡死
+    dbg_info("+++++++++++++++++++++++++shutdown loop++++++++++++++++\r\n");
+    sleep(3);
+    dbg_info("+++++++++++++++++++++++++activate loop++++++++++++++++\r\n");
+    netif_activate(netif);
+
     while (1)
     {
-        // 这里模拟应用程序不断向workbench发送数据包
-        char *tmp = "app test";
-        pkg_t *app_pkg = package_create(tmp, strlen(tmp));
-        workbench_put_stuff(app_pkg);
-        sleep(3); // 主进程不退出，子线程都是死循环，回收不了
+        sleep(1);
     }
+    
 }
 
 int main(int agrc, char *argv[])

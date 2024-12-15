@@ -288,7 +288,7 @@ int netif_activate(netif_t *netif)
         dbg_error("empty netif,can not activate\r\n");
         return -1;
     }
-    if (netif->state != NETIF_OPEN)
+    if (!(netif->state == NETIF_OPEN || netif->state == NETIF_DIE))
     {
         dbg_error("netif state is wrong,can not activate\r\n");
         return -2;
@@ -321,28 +321,41 @@ int netif_shutdown(netif_t *netif)
     }
     int ret;
     netif->state = NETIF_DIE;
-    if(netif->tsend)
+    if (netif->tsend)
     {
-        ret = thread_join(&netthread_pool,netif->tsend,NULL);
-        if(ret<0)
+        lock(&netif->locker);
+        netif->send_flag = 0;
+        unlock(&netif->locker);
+        ret = thread_join(&netthread_pool, netif->tsend, NULL);
+        if (ret < 0)
         {
             dbg_error("send thread join fail\r\n");
         }
+        else
+        {
+            lock(&netif->locker);
+            netif->tsend = NULL;
+            unlock(&netif->locker);
+        }
     }
-    if(netif->trecv)
+    if (netif->trecv)
     {
-        ret = thread_join(&netthread_pool,netif->trecv,NULL);
-        if(ret<0)
+        lock(&netif->locker);
+        netif->recv_flag = 0;
+        unlock(&netif->locker);
+        ret = thread_join(&netthread_pool, netif->trecv, NULL);
+        if (ret < 0)
         {
             dbg_error("recv thread join fail\r\n");
         }
+        else
+        {
+            lock(&netif->locker);
+            netif->trecv = NULL;
+            unlock(&netif->locker);
+        }
     }
-    lock(&netif->locker);
-    netif->recv_flag = 0;
-    netif->send_flag = 0;
-    netif->tsend = NULL;
-    netif->trecv = NULL;
-    unlock(&netif->locker);
+    
     while (!msgQ_is_empty(&netif->in_q))
     {
         pkg_t *pkg = (pkg_t *)msgQ_dequeue(&netif->in_q, -1);
@@ -432,7 +445,7 @@ int netif_receive_simulate(netif_t *netif)
     uint8_t *buf = malloc(PKG_DATA_BLK_SIZE);
     memset(buf, 0, PKG_DATA_BLK_SIZE);
     ret = netif->ops->receive(netif, buf, PKG_DATA_BLK_SIZE); // 网卡驱动
-    if(ret<=0)
+    if (ret <= 0)
     {
         free(buf);
         return -1;
@@ -466,6 +479,7 @@ DEFINE_THREAD_FUNC(netif_send)
         flag = netif->send_flag;
         unlock(&netif->locker);
     }
+    dbg_info("++++++++++++++++++++++++++++netif send killed++++++++++++++++++++\r\n");
     return NULL;
 }
 
@@ -479,8 +493,9 @@ DEFINE_THREAD_FUNC(netif_receive)
     {
         netif_receive_simulate(netif);
         lock(&netif->locker);
-        int flag = netif->recv_flag;
+        flag = netif->recv_flag;
         unlock(&netif->locker);
     }
+    dbg_info("++++++++++++++++++++++++++++++netif recv killed+++++++++++++++++++++\r\n");
     return NULL;
 }
