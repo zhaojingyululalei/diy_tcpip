@@ -21,9 +21,6 @@ void net_system_init(void)
     threadpool_init(&netthread_pool,&pool_attr);
 
     netif_init();
-    netif_t* netif = loop_init();
-    loop_open(netif,NULL);
-    print_netif_list();
     return;
     
 }
@@ -33,5 +30,6 @@ void net_system_init(void)
  */
 void net_system_start(void)
 {
+    
     networker_start();
 }

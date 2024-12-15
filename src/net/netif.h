@@ -34,7 +34,9 @@ typedef struct _netif_ops_t
 {
     int (*open) (struct _netif_t* netif,void* ex_data); //不同驱动可能有些不同参数
     int (*close) (struct _netif_t* netif);
+    //len:要发送的长度  return 成功发送的数据长度
     int (*send) (struct _netif_t* netif,const uint8_t* buf,int len);
+    //len:buf缓冲区的长度  return 接收到的数据长度
     int (*receive) (struct _netif_t* netif,uint8_t* buf,int len);
 }netif_ops_t;
 typedef struct _netif_t
@@ -59,8 +61,15 @@ typedef struct _netif_t
     msgQ_t out_q;
     pkg_t* out_q_buf[NETIF_OUTQ_BUF_MAX];
 
-    netif_ops_t* ops;
-    void* ex_data;
+    netif_ops_t* ops; //驱动
+    void* ex_data; //驱动参数
+
+    int send_flag; //杀死线程的标志,网卡停止工作的时候
+    int recv_flag;
+    thread_t* tsend;
+    thread_t* trecv;
+
+    lock_t locker;
 
 }netif_t;
 
@@ -81,6 +90,17 @@ int netif_free(netif_t* netif);
 int netif_open(netif_t* netif,void* ex_data);
 int netif_activate(netif_t* netif);
 int netif_shutdown(netif_t* netif);
+int netif_close(netif_t* netif);
+
+pkg_t* netif_getpkg(msgQ_t* queue);
+int netif_putpkg(msgQ_t* queue,pkg_t* pkg);
+
+//这里暂时用线程做，移植后，用中断代替
+int netif_send_simulate(netif_t* netif);
+int netif_receive_simulate(netif_t* netif);
+
+DEFINE_THREAD_FUNC(netif_send);
+DEFINE_THREAD_FUNC(netif_receive);
 /***************** */
 
 
@@ -88,6 +108,8 @@ int netif_shutdown(netif_t* netif);
 //网卡链表操作,涉及到链表操作，都得上锁
 int netif_add(netif_t* netif);
 netif_t* netif_remove(netif_t* netif);
+netif_t* netif_first();
+netif_t* netif_next(netif_t* netif);
 void print_netif_list(void);
 /******************** */
 
