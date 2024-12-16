@@ -88,6 +88,10 @@ netif_card_info_t* get_one_net_card(void)
     return NULL;
     
 }
+netif_card_info_t* get_one_specified_card(int idx)
+{
+    return &net_drive_info.pcap_netif_drive_arr[idx];
+}
 void put_one_net_card(int card_idx)
 {
     net_drive_info.pcap_netif_drive_arr[card_idx].used = 0;
@@ -168,12 +172,14 @@ void pcap_drive_init(void)
             break; // only print the first IPv4 address
         
         }
+        /*小端存储mac地址*/
         if (is_mac_available(mac))
         {
             for(int i = 0 ;i<6;++i)
             {
                 net_drive_info.pcap_netif_drive_arr[net_drive_info.num].mac[i] = mac[5-i];
             }
+            net_drive_info.pcap_netif_drive_arr[net_drive_info.num].id =net_drive_info.num;
             net_drive_info.pcap_netif_drive_arr[net_drive_info.num++].avail = 1;
         }
     }
@@ -378,11 +384,12 @@ int pcap_recv_pkg(pcap_t *handler, const uint8_t **pkg_data)
     }
     else
     {
+        printf("%s\r\n",*pkg_data);
         return pkg_info->len;
     }
 }
 
-int pcap_send_pkg(pcap_t *handler, uint8_t *buffer, int size)
+int pcap_send_pkg(pcap_t *handler, const uint8_t *buffer, int size)
 {
     int ret = pcap_inject(handler, buffer, size);
     return ret;

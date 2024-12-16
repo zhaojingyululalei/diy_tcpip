@@ -21,7 +21,6 @@ typedef struct _pkg_t{
 
     int pos; //指向下一个空白位置
     pkg_dblk_t* curblk;
-    int inner_offset; //数据块快内偏移
 
 }pkg_t; 
 
@@ -52,6 +51,8 @@ int package_read(pkg_t *package, uint8_t *buf, int len);
 int package_lseek(pkg_t *package, int offset);
 int package_memset(pkg_t *package, int offset, uint8_t value, int len);
 int package_memcpy(pkg_t *dest_pkg, int dest_offset, pkg_t *src_pkg, int src_offset, int len);
+int package_copy(pkg_t* dest_pkg,pkg_t* src_pkg);
+void package_print(pkg_t* pkg);
 //创建包并直接写入数据
 pkg_t*  package_create(uint8_t* data_buf,int len);
 //创建空白包，稍后写入数据

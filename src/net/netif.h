@@ -52,7 +52,7 @@ typedef struct _netif_t
 
     int id;
     
-    uint8_t macaddr[6];
+    uint8_t macaddr[MAC_ADDR_ARR_LEN];
     int mtu;
     list_node_t node;
 
@@ -81,13 +81,13 @@ void netif_destory(void);
 
 /********************* */
 //网卡注册
-netif_t* netif_register(const netif_info_t* info,const netif_ops_t* ops,const void* ex_data);
+netif_t* netif_register(const netif_info_t* info,const netif_ops_t* ops, void* ex_data);
 //虚拟网卡注册
-netif_t* netif_virtual_register(const netif_info_t* info,const netif_ops_t* ops,const void* ex_data);
+netif_t* netif_virtual_register(const netif_info_t* info,const netif_ops_t* ops, void* ex_data);
 //网卡释放
 int netif_free(netif_t* netif);
 
-int netif_open(netif_t* netif,void* ex_data);
+int netif_open(netif_t *netif);
 int netif_activate(netif_t* netif);
 int netif_shutdown(netif_t* netif);
 int netif_close(netif_t* netif);

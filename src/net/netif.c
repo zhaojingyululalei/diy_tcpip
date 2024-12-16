@@ -2,7 +2,7 @@
 #include "mmpool.h"
 #include "debug.h"
 #include "net_drive.h"
-static uint8_t mac_addr_Host[6] = {0x0, 0x0c, 0x29, 0x6e, 0x06, 0x0c};
+static uint8_t mac_addr_Host[MAC_ADDR_ARR_LEN] = {0x0, 0x0c, 0x29, 0x6e, 0x06, 0x0c};
 uint8_t *get_mac_addr(const char *name)
 {
     if (strncmp(name, "ens37", 5) == 0)
@@ -143,11 +143,11 @@ void netif_destory(void)
     lock_destory(&netif_list_locker);
     list_destory(&netif_list);
 }
-
-netif_t *netif_register(const netif_info_t *info, const netif_ops_t *ops, const void *ex_data)
+#include "phnetif.h"
+netif_t *netif_register(const netif_info_t *info, const netif_ops_t *ops, void *ex_data)
 {
     netif_t *netif = (netif_t *)mempool_alloc_blk(&netif_pool, -1);
-    netif_card_info_t *card = get_one_net_card();
+    netif_card_info_t *card = ((phnetif_drive_data_t *)ex_data)->card_info;
     if (!netif)
     {
         dbg_warning("netif_pool out of memory\r\n");
@@ -166,7 +166,7 @@ netif_t *netif_register(const netif_info_t *info, const netif_ops_t *ops, const 
     }
     return netif;
 }
-netif_t *netif_virtual_register(const netif_info_t *info, const netif_ops_t *ops, const void *ex_data)
+netif_t *netif_virtual_register(const netif_info_t *info, const netif_ops_t *ops,  void *ex_data)
 {
     netif_t *netif = (netif_t *)mempool_alloc_blk(&netif_pool, -1);
     memset(netif, 0, sizeof(netif));
@@ -255,7 +255,7 @@ netif_t *netif_next(netif_t *netif)
     }
 }
 
-int netif_open(netif_t *netif, void *ex_data)
+int netif_open(netif_t *netif)
 {
     if (netif->state != NETIF_CLOSE)
     {
@@ -277,7 +277,11 @@ int netif_open(netif_t *netif, void *ex_data)
         return ret;
     }
 
-    netif->ops->open(netif, ex_data); // 调用驱动
+    ret = netif->ops->open(netif, netif->ex_data); // 调用驱动
+    if(ret <0 )
+    {
+        return ret;
+    }
     return 0;
 }
 #include "net.h"
@@ -394,6 +398,7 @@ int netif_close(netif_t *netif)
     }
     msgQ_destory(&netif->in_q);
     msgQ_destory(&netif->out_q);
+
     netif->state = NETIF_CLOSE;
     return 0;
 }
@@ -442,9 +447,8 @@ int netif_receive_simulate(netif_t *netif)
         return -1;
     }
     int ret;
-    uint8_t *buf = malloc(PKG_DATA_BLK_SIZE);
-    memset(buf, 0, PKG_DATA_BLK_SIZE);
-    ret = netif->ops->receive(netif, buf, PKG_DATA_BLK_SIZE); // 网卡驱动
+    uint8_t *buf = NULL;
+    ret = netif->ops->receive(netif, &buf, PKG_DATA_BLK_SIZE); // 网卡驱动
     if (ret <= 0)
     {
         free(buf);
@@ -456,6 +460,7 @@ int netif_receive_simulate(netif_t *netif)
         dbg_error("create a pkg fail\r\n");
         return -1;
     }
+    
     ret = netif_putpkg(&netif->in_q, pkg);
     if (ret == 0)
     {

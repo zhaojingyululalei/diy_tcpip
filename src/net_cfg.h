@@ -2,6 +2,7 @@
 #ifndef __NET_CFG_H
 #define __NET_CFG_H
 #define IPV4_ADDR_SIZE 32
+#define MAC_ADDR_ARR_LEN    6
 #define MAC_ARRAY_LEN 6
 
 
@@ -22,6 +23,10 @@
 
 #define NETIF_LOOP_IPADDR   "127.0.0.1"
 #define NETIF_LOOP_MASK     "255.255.255.0"
+
+#define NETIF_PH_IPADDR     "192.168.169.10"
+#define NETIF_PH_MASK       "255.255.255.0"
+#define NETIF_PH_GATEWAY    "192.168.128.2"
 
 
 #endif

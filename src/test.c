@@ -19,10 +19,16 @@
 //             printf("recv a pkg success\n");
 //             len = len > sizeof(buffer) ? sizeof(buffer) : len;
 //             memcpy(buffer, pkg_data, len);
+//             for (int i = 0; i < len; ++i)
+//             {
+
+//                 printf("%x ", buffer[i]);
+//             }
+//             printf("\r\n");
 //             buffer[0] = 0x55;
 //             buffer[1] = 0xaa;
 
-//             if(pcap_send_pkg(pcap,buffer,len)<0)
+//             if (pcap_send_pkg(pcap, buffer, len) < 0)
 //             {
 //                 dbg_error("send a pkg fail\n");
 //                 break;
@@ -255,6 +261,7 @@
 
 // /*测试数据包接口*/
 // // 用于初始化包池和打印信息
+// #include "stdio.h"
 // #include "package.h"
 // void init_and_print_pool_info() {
 
@@ -302,91 +309,17 @@
 
 // void test_write_read_memory_ops() {
 
-//     uint8_t data_buf[512] = {0};  // 示例数据缓冲区
-
-//     pkg_t *package = package_create(data_buf, 0);
-
-//     if (!package) {
-
-//         fprintf(stderr, "Failed to create package\n");
-
-//         return;
-
+//     uint8_t buf[956];
+//     for(int i=  0;i<956;++i)
+//     {
+//         buf[i]=('a'+i)%24;
 //     }
+//     pkg_t *pkg = package_create(buf,956);
+//     package_print(pkg);
+//     pkg_t* dest = package_alloc(6);
+//     package_copy(dest,pkg);
+//     package_print(dest);
 
-//     uint8_t write_buf[] = "Hello, World!";
-
-//     if (package_write(package, write_buf, strlen((char*)write_buf)) != strlen((char*)write_buf)) {
-
-//         fprintf(stderr, "Failed to write to package\n");
-
-//         package_alloc(0);  // 释放包
-
-//         return;
-
-//     }
-
-//     uint8_t read_buf[64];
-
-//     if (package_read(package, read_buf, strlen((char*)write_buf)) != strlen((char*)write_buf)) {
-
-//         fprintf(stderr, "Failed to read from package\n");
-
-//         package_alloc(0);  // 释放包
-
-//         return;
-
-//     }
-
-//     read_buf[strlen((char*)write_buf)] = '\0';  // 确保字符串以 null 结尾
-
-//     printf("Read from package: %s\n", read_buf);
-
-//     // 测试 memset
-
-//     if (package_memset(package, 0, 0xFF, strlen((char*)write_buf)) != strlen((char*)write_buf)) {
-
-//         fprintf(stderr, "Failed to memset in package\n");
-
-//     } else {
-
-//         printf("Memset successful\n");
-
-//     }
-
-//     // 重置读取位置
-
-//     if (package_lseek(package, 0) != 0) {
-
-//         fprintf(stderr, "Failed to reset read position\n");
-
-//     }
-
-//     // 测试 memcpy
-
-//     uint8_t copy_buf[64];
-
-//     memset(copy_buf, 0, sizeof(copy_buf));
-
-//     pkg_t *copy_package = package_create(copy_buf, sizeof(copy_buf));
-
-//     if (!copy_package || package_memcpy(copy_package, 0, package, 0, strlen((char*)write_buf)) != strlen((char*)write_buf)) {
-
-//         fprintf(stderr, "Failed to copy package content\n");
-
-//     } else {
-
-//         copy_buf[strlen((char*)write_buf)] = '\0';
-
-//         printf("Copied from package: %s\n", copy_buf);
-
-//     }
-
-//     // 释放包
-
-//     package_alloc(0);
-
-//     package_alloc(0);
 
 // }
 // void test_package(void)
@@ -428,19 +361,16 @@ DEFINE_THREAD_FUNC(app)
         sleep(20); // 主进程不退出，子线程都是死循环，回收不了
     }
 }
-void test_worker(void)
+void test_loop(void)
 {
-    net_system_init();
-    net_system_start();
-
     netif_t *netif = loop_init();
-    netif_open(netif, NULL);
+    netif_open(netif);
     print_netif_list();
     netif_activate(netif);
 
-    thread_create(&netthread_pool,app,NULL);
+    thread_create(&netthread_pool, app, NULL);
     sleep(3);
-    netif_shutdown(netif); //主线程等在回收recv线程那里，卡死
+    netif_shutdown(netif); // 主线程等在回收recv线程那里，卡死
     dbg_info("+++++++++++++++++++++++++shutdown loop++++++++++++++++\r\n");
     sleep(3);
     dbg_info("+++++++++++++++++++++++++activate loop++++++++++++++++\r\n");
@@ -450,17 +380,35 @@ void test_worker(void)
     {
         sleep(1);
     }
-    
+}
+#include "phnetif.h"
+void test_phnetif(void)
+{
+    netif_t *netif = phnetif_init();
+    netif_open(netif);
+    print_netif_list();
+    netif_activate(netif);
+
+    while (1)
+    {
+        sleep(1);
+    }
+}
+void test_worker(void)
+{
+    net_system_init();
+    net_system_start();
+    test_phnetif();
 }
 
 int main(int agrc, char *argv[])
 {
-    // test_drive();
+    //test_drive();
     //  test_threadpool();
     //  test_locks();
     //  test_semaphores();
     // test_mempool();
-    // test_package();
+     //test_package();
     // test_ipaddr();
     test_worker();
     return 0;

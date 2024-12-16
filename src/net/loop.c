@@ -75,7 +75,6 @@ netif_t* loop_init(void)
     ipaddr_s2n(NETIF_LOOP_IPADDR,&loop_info->ipaddr);
     ipaddr_s2n(NETIF_LOOP_MASK,&loop_info->mask);
     strncpy(loop_info->name,"lo",2);
-    loop_info->type = NETIF_TYPE_LOOP;
 
 
     netif_t* ret = netif_virtual_register(loop_info,&loop_ops,NULL);
@@ -93,6 +92,11 @@ netif_t* loop_init(void)
 /*算是虚拟网卡，没有驱动，因此为空实现*/
 int loop_open(netif_t* netif,void* ex_data)
 {
+    if(!netif)
+    {
+        return -1;
+    }
+    netif->info.type = NETIF_TYPE_LOOP;
     initQueue(&queue);
 
     return 0;

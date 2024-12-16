@@ -11,6 +11,7 @@ threadpool_t netthread_pool;
  */
 void net_system_init(void)
 {
+    //物理网卡检测
     pcap_drive_init();
     package_pool_init();
 
@@ -19,7 +20,7 @@ void net_system_init(void)
     threadpool_attr_t pool_attr;
     pool_attr.threads_nr = THREADPOOL_THREADS_NR;
     threadpool_init(&netthread_pool,&pool_attr);
-
+    //netif链表
     netif_init();
     return;
     

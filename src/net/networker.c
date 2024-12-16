@@ -13,8 +13,8 @@ DEFINE_THREAD_FUNC(mover)
         netif_t *cur = netif_first();
         while (cur)
         {
-            //从inq获取一个数据包放入工作台
-            pkg_t *pkg = netif_getpkg(&cur->in_q); //非阻塞
+            // 从inq获取一个数据包放入工作台
+            pkg_t *pkg = netif_getpkg(&cur->in_q); // 非阻塞
             if (pkg)
             {
 
@@ -27,28 +27,37 @@ DEFINE_THREAD_FUNC(mover)
     }
 }
 
-pkg_t* handle(pkg_t* pkg)
+pkg_t *handle(pkg_t *pkg)
 {
-    char *tmp= "hello" ;
-    dbg_info("handling a package\r\n");
-    sleep(1);
-    pkg_t* newpack = package_create(tmp,strlen(tmp));
-    return newpack;
+    uint8_t buf[2] = {0x55,0xAA};
+    package_lseek(pkg,0);
+    package_write(pkg,buf,2);
+    return NULL;
 }
 // 从工作台拿东西进行处理
 DEFINE_THREAD_FUNC(worker)
 {
     while (1)
     {
-       uint8_t* buf = NULL;
+        uint8_t *buf = NULL;
         pkg_t *pkg = workbench_get_stuff();
         dbg_info("worker get stuff pakcage,len = %d\n", pkg->total);
-        pkg_t* newpack = handle(pkg);
-        package_collect(pkg);
-        //向哪个网卡发，得判断，这里测试，默认向loop发
-        netif_t* loop = netif_first();
-        netif_putpkg(&loop->out_q,newpack);
-        
+        handle(pkg);
+        // 向哪个网卡发，得解析包头判断，这里测试，默认向loop发
+        //  netif_t* loop = netif_first();
+        //  netif_putpkg(&loop->out_q,newpack);
+
+        // 向哪个网卡发，得解析包头判断，这里测试向物理网卡发
+        netif_t *cur_netif = netif_first();
+        while (cur_netif)
+        {
+            if (cur_netif->info.type == NETIF_TYPE_ETH)
+            {
+                netif_putpkg(&cur_netif->out_q, pkg);
+                break;
+            }
+            cur_netif = netif_next(cur_netif);
+        }
     }
 }
 
@@ -59,6 +68,4 @@ void networker_start(void)
     semaphore_init(&mover_sem, 0);
     thread_create(&netthread_pool, worker, NULL);
     thread_create(&netthread_pool, mover, NULL);
-
-    
 }

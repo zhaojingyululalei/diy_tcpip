@@ -80,7 +80,7 @@ static void package_datablk_destory(pkg_dblk_t *blk)
 int package_collect(pkg_t *package)
 {
     int ret;
-    if(!package)
+    if (!package)
     {
         return -3;
     }
@@ -603,14 +603,18 @@ int package_join(pkg_t *from, pkg_t *to)
 int package_write(pkg_t *package, uint8_t *buf, int len)
 {
     lock(&pkg_locker);
-    if (package == NULL || buf == NULL || len > package->total)
+    if (package == NULL || buf == NULL)
     {
         unlock(&pkg_locker);
         return -1;
     }
+    if (package->pos + len > package->total)
+    {
+        len = package->total - package->pos; // 限制读取长度
+    }
 
     pkg_dblk_t *curk = package->curblk;
-    if (curk == NULL || package->inner_offset >= curk->size)
+    if (curk == NULL )
     {
         unlock(&pkg_locker);
         return -1;
@@ -618,23 +622,20 @@ int package_write(pkg_t *package, uint8_t *buf, int len)
 
     uint8_t *src = buf;
     int remaining_len = len;
-    int write_size = curk->size - package->inner_offset;
+    int write_size = curk->size;
 
     while (remaining_len > 0)
     {
         if (curk == NULL)
         {
-            unlock(&pkg_locker);
-            return -1;
+            break;
         }
-
-        uint8_t *dest = &curk->data[curk->offset + package->inner_offset];
         if (write_size > remaining_len)
         {
             write_size = remaining_len;
         }
 
-        memcpy(dest, src, write_size);
+        memcpy(&curk->data[curk->offset], src, write_size);
         src += write_size;
         remaining_len -= write_size;
 
@@ -642,53 +643,44 @@ int package_write(pkg_t *package, uint8_t *buf, int len)
         {
             curk = package_get_next_datablk(curk);
             package->curblk = curk;
-            package->inner_offset = 0;
             write_size = curk ? curk->size : 0;
-        }
-        else
-        {
-            package->inner_offset += write_size;
         }
     }
 
-    package->pos += len; // 总写入位置更新
+    package->pos += len-remaining_len; // 总写入位置更新
     unlock(&pkg_locker);
 
-    return len;
+    return len-remaining_len;
 }
 
 int package_read(pkg_t *package, uint8_t *buf, int len)
 {
-    lock(&pkg_locker);
     if (package == NULL || buf == NULL || len <= 0)
-    {
-        unlock(&pkg_locker);
         return -1;
-    }
+
+    lock(&pkg_locker);
 
     if (package->pos + len > package->total)
     {
-        unlock(&pkg_locker);
-        return -1; // 防止读取超出总长度
+        len = package->total - package->pos; // 限制读取长度
     }
 
     pkg_dblk_t *curk = package->curblk;
-    if (curk == NULL || package->inner_offset >= curk->size)
+    if (curk == NULL )
     {
         unlock(&pkg_locker);
-        return -1; // 数据块检查
+        return 0; // 数据块为空或偏移非法
     }
 
     uint8_t *dest = buf;
     int remaining_len = len;
-    int read_size = curk->size - package->inner_offset;
+    int read_size = curk->size ;
 
     while (remaining_len > 0)
     {
         if (curk == NULL)
         {
-            unlock(&pkg_locker);
-            return -1; // 数据块耗尽
+            break; // 数据块链表耗尽
         }
 
         if (read_size > remaining_len)
@@ -696,7 +688,7 @@ int package_read(pkg_t *package, uint8_t *buf, int len)
             read_size = remaining_len; // 当前块能读取的大小
         }
 
-        memcpy(dest, &curk->data[curk->offset + package->inner_offset], read_size);
+        memcpy(dest, &curk->data[curk->offset], read_size);
         dest += read_size;
         remaining_len -= read_size;
 
@@ -704,19 +696,14 @@ int package_read(pkg_t *package, uint8_t *buf, int len)
         { // 读取完当前块，切换到下一块
             curk = package_get_next_datablk(curk);
             package->curblk = curk;
-            package->inner_offset = 0;
             read_size = curk ? curk->size : 0;
-        }
-        else
-        {
-            package->inner_offset += read_size; // 更新块内偏移
         }
     }
 
-    package->pos += len; // 总读取位置更新
+    package->pos += len - remaining_len; // 总读取位置更新
     unlock(&pkg_locker);
 
-    return len;
+    return len - remaining_len; // 返回实际读取的字节数
 }
 
 int package_lseek(pkg_t *package, int offset)
@@ -736,7 +723,7 @@ int package_lseek(pkg_t *package, int offset)
         if (cumulative_offset + curk->size > offset)
         {
             package->curblk = curk;
-            package->inner_offset = offset - cumulative_offset;
+            
             package->pos = offset;
             unlock(&pkg_locker);
             return 0;
@@ -756,52 +743,17 @@ int package_memcpy(pkg_t *dest_pkg, int dest_offset, pkg_t *src_pkg, int src_off
     {
         return -1;
     }
-
+    int ret;
     lock(&pkg_locker);
 
-    if (src_offset < 0 || src_offset + len > src_pkg->total ||
-        dest_offset < 0 || dest_offset + len > dest_pkg->total)
-    {
-        unlock(&pkg_locker);
-        return -1;
-    }
+    package_lseek(dest_pkg,dest_offset);
+    package_lseek(src_pkg,src_offset);
 
-    uint8_t *buffer = (uint8_t *)malloc(len);
-    if (buffer == NULL)
-    {
-        unlock(&pkg_locker);
-        return -1;
-    }
+    uint8_t *buf = malloc(len);
 
-    if (package_lseek(src_pkg, src_offset) != 0)
-    {
-        free(buffer);
-        unlock(&pkg_locker);
-        return -1;
-    }
-
-    if (package_read(src_pkg, buffer, len) != 0)
-    {
-        free(buffer);
-        unlock(&pkg_locker);
-        return -1;
-    }
-
-    if (package_lseek(dest_pkg, dest_offset) != 0)
-    {
-        free(buffer);
-        unlock(&pkg_locker);
-        return -1;
-    }
-
-    if (package_write(dest_pkg, buffer, len) != 0)
-    {
-        free(buffer);
-        unlock(&pkg_locker);
-        return -1;
-    }
-
-    free(buffer);
+    ret = package_read(src_pkg,buf,PKG_DATA_BLK_SIZE);
+    package_write(dest_pkg,buf,ret);
+    
     unlock(&pkg_locker);
 
     return 0;
@@ -830,8 +782,8 @@ int package_memset(pkg_t *package, int offset, uint8_t value, int len)
         return -1;
     }
 
-    uint8_t *dest = &curblk->data[curblk->offset + package->inner_offset];
-    int write_size = curblk->size - package->inner_offset;
+    uint8_t *dest = &curblk->data[curblk->offset ];
+    int write_size = curblk->size ;
 
     while (remaining_len > 0)
     {
@@ -853,13 +805,8 @@ int package_memset(pkg_t *package, int offset, uint8_t value, int len)
         {
             curblk = package_get_next_datablk(curblk);
             package->curblk = curblk;
-            package->inner_offset = 0;
             dest = curblk ? &curblk->data[curblk->offset] : NULL;
             write_size = curblk ? curblk->size : 0;
-        }
-        else
-        {
-            package->inner_offset += write_size;
         }
     }
 
@@ -891,7 +838,7 @@ pkg_t *package_create(uint8_t *data_buf, int len)
         package_collect(pkg);
         return NULL;
     }
-    ret = package_lseek(pkg, 0); //写完后，让指针默认回到开头处
+    ret = package_lseek(pkg, 0); // 写完后，让指针默认回到开头处
     if (ret != 0)
     {
         package_collect(pkg);
@@ -923,4 +870,22 @@ int package_add_header(pkg_t *package, uint8_t *head_buf, int head_len)
         return ret;
     };
     return 0;
+}
+
+int package_copy(pkg_t *dest_pkg, pkg_t *src_pkg)
+{
+    return package_memcpy(dest_pkg, 0, src_pkg, 0, src_pkg->total);
+}
+void package_print(pkg_t *pkg)
+{
+    uint8_t *rbuf = malloc(pkg->total);
+    package_lseek(pkg,0);
+    package_read(pkg, rbuf, pkg->total);
+    for (int i = 0; i < pkg->total; ++i)
+    {
+
+        printf("%x ", rbuf[i]);
+    }
+    printf("\r\n");
+    free(rbuf);
 }
