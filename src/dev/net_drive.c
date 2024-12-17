@@ -172,12 +172,12 @@ void pcap_drive_init(void)
             break; // only print the first IPv4 address
         
         }
-        /*小端存储mac地址*/
+        
         if (is_mac_available(mac))
         {
             for(int i = 0 ;i<6;++i)
             {
-                net_drive_info.pcap_netif_drive_arr[net_drive_info.num].mac[i] = mac[5-i];
+                net_drive_info.pcap_netif_drive_arr[net_drive_info.num].mac[i] = mac[i];
             }
             net_drive_info.pcap_netif_drive_arr[net_drive_info.num].id =net_drive_info.num;
             net_drive_info.pcap_netif_drive_arr[net_drive_info.num++].avail = 1;

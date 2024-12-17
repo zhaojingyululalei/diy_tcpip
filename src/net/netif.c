@@ -129,8 +129,8 @@ void print_netif_list(void)
         // 格式化 MAC 地址为字符串
         char mac_str[18];
         snprintf(mac_str, sizeof(mac_str), "%02X:%02X:%02X:%02X:%02X:%02X",
-                 netif->macaddr[5], netif->macaddr[4], netif->macaddr[3],
-                 netif->macaddr[2], netif->macaddr[1], netif->macaddr[0]);
+                 netif->macaddr[0], netif->macaddr[1], netif->macaddr[2],
+                 netif->macaddr[3], netif->macaddr[4], netif->macaddr[5]);
 
         // 打印信息
        dbg_info("| %-4d | %-13s | %-10s | %-11s | %-17s |\n", netif->id, netif->info.name, type_str, ip_str, mac_str);

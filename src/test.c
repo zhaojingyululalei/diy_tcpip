@@ -312,10 +312,17 @@ void test_write_read_memory_ops() {
     int ret;
     pkg_t* pkg = package_alloc(1024);
     ret = package_write(pkg,"hello",strlen("hello"));
-    package_print(pkg);
+    package_lseek(pkg,0);
+    char* x = package_data(pkg);
+    printf("%s\r\n",x);
+    // package_print(pkg);
     package_lseek(pkg,ret);
+   
     package_write(pkg,"world",strlen("world"));
-    package_print(pkg);
+    package_lseek(pkg,ret);
+    char* data = package_data(pkg);
+    printf("%s\r\n",data);
+    //package_print(pkg);
 
 
 }
@@ -405,7 +412,7 @@ int main(int agrc, char *argv[])
     //  test_locks();
     //  test_semaphores();
     // test_mempool();
-    // test_package();
+     //test_package();
     // test_ipaddr();
     test_worker();
     return 0;
