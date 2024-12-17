@@ -28,6 +28,21 @@
         "mmpool.h": "c",
         "pkg_workbench.h": "c",
         "loop.h": "c",
-        "networker.h": "c"
+        "networker.h": "c",
+        "bit": "c",
+        "compare": "c",
+        "condition_variable": "c",
+        "cstddef": "c",
+        "forward_list": "c",
+        "list": "c",
+        "string": "c",
+        "buffer": "c",
+        "io_context": "c",
+        "socket": "c",
+        "future": "c",
+        "limits": "c",
+        "memory": "c",
+        "new": "c",
+        "functional": "c"
     },
 }

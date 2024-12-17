@@ -32,5 +32,5 @@ void dbg_print(int level, const char *file, const char *func, int line, const ch
     vsprintf(str_buf + offset, fmt, args);
     va_end(args);
 
-    printf("%s" DBG_STYLE_RESET, str_buf);
+   printf("%s" DBG_STYLE_RESET, str_buf);
 }

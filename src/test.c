@@ -16,15 +16,15 @@
 //     {
 //         if ((len = pcap_recv_pkg(pcap, &pkg_data)) > 0)
 //         {
-//             printf("recv a pkg success\n");
+//            dbg_info("recv a pkg success\n");
 //             len = len > sizeof(buffer) ? sizeof(buffer) : len;
 //             memcpy(buffer, pkg_data, len);
 //             for (int i = 0; i < len; ++i)
 //             {
 
-//                 printf("%x ", buffer[i]);
+//                dbg_info("%x ", buffer[i]);
 //             }
-//             printf("\r\n");
+//            dbg_info("\r\n");
 //             buffer[0] = 0x55;
 //             buffer[1] = 0xaa;
 
@@ -43,7 +43,7 @@
 // #include <assert.h>
 // DEFINE_THREAD_FUNC(test_thread_func) {
 //     int* num = (int*)arg;
-//     printf("Thread received value: %d\n", *num);
+//    dbg_info("Thread received value: %d\n", *num);
 //     *num += 1;
 //     return (void*) num;
 // }
@@ -70,7 +70,7 @@
 //         void* ret;
 //         result = thread_join(&pool, threads[i], &ret);
 //         assert(result == 0 && "Thread join failed!");
-//         printf("Thread %d returned value: %d\n", i + 1, *((int*) ret));
+//        dbg_info("Thread %d returned value: %d\n", i + 1, *((int*) ret));
 //     }
 
 //     // Verify thread list count
@@ -80,7 +80,7 @@
 //     // Additional tests: Add more edge cases if necessary
 
 //     // Cleanup and exit
-//     printf("Test completed successfully.\n");
+//    dbg_info("Test completed successfully.\n");
 // }
 
 // // Test function to test locks (mutex)
@@ -97,19 +97,19 @@
 //     assert(result == 0 && "Lock failed!");
 
 //     // Simulate some critical section
-//     printf("Lock acquired.\n");
+//    dbg_info("Lock acquired.\n");
 //     sleep(1); // Simulate work done in critical section
 
 //     // Unlock the mutex
 //     result = unlock(&locker);
 //     assert(result == 0 && "Unlock failed!");
-//     printf("Lock released.\n");
+//    dbg_info("Lock released.\n");
 
 //     // Destroy the lock
 //     result = lock_destory(&locker);
 //     assert(result == 0 && "Lock destruction failed!");
 
-//     printf("Lock test completed successfully.\n");
+//    dbg_info("Lock test completed successfully.\n");
 // }
 
 // // Test function to test semaphores
@@ -130,7 +130,7 @@
 //     // Wait (decrement) the semaphore, it should block until the count is available
 //     result = wait(&sem);
 //     assert(result == 0 && "Wait operation failed!");
-//     printf("Semaphore wait succeeded, count decremented.\n");
+//    dbg_info("Semaphore wait succeeded, count decremented.\n");
 
 //     // Wait with timeout (non-blocking wait)
 //     result = time_wait(&sem, 0);
@@ -144,7 +144,7 @@
 //     result = semaphore_destory(&sem);
 //     assert(result == 0 && "Semaphore destruction failed!");
 
-//     printf("Semaphore test completed successfully.\n");
+//    dbg_info("Semaphore test completed successfully.\n");
 // }
 // #include "mmpool.h"
 // void test_mempool() {
@@ -193,7 +193,7 @@
 
 //     // 销毁内存池
 //     mempool_destroy(&mempool);
-//     printf("内存池测试完成。\n");
+//    dbg_info("内存池测试完成。\n");
 // }
 // #include "msgQ.h"
 // void test_msg_queue() {
@@ -226,7 +226,7 @@
 //     // 从队列中出队
 //     void* dequeued_msg = msgQ_dequeue(&mq, 0);  // 无超时
 //     assert(dequeued_msg != NULL && "出队失败!");
-//     printf("出队的消息: %s\n", (char*)dequeued_msg);
+//    dbg_info("出队的消息: %s\n", (char*)dequeued_msg);
 //     assert(dequeued_msg == msg1 && "出队的消息不正确!");
 
 //     // 检查队列的状态
@@ -236,7 +236,7 @@
 //     // 从队列中出队第二个消息
 //     dequeued_msg = msgQ_dequeue(&mq, 0);  // 无超时
 //     assert(dequeued_msg != NULL && "出队失败!");
-//     printf("出队的消息: %s\n", (char*)dequeued_msg);
+//    dbg_info("出队的消息: %s\n", (char*)dequeued_msg);
 //     assert(dequeued_msg == msg2 && "出队的消息不正确!");
 
 //     // 检查队列是否为空
@@ -256,79 +256,76 @@
 //     result = msgQ_destory(&mq);
 //     assert(result == 0 && "销毁消息队列失败!");
 
-//     printf("消息队列测试完成。\n");
+//    dbg_info("消息队列测试完成。\n");
 // }
 
-// /*测试数据包接口*/
-// // 用于初始化包池和打印信息
-// #include "stdio.h"
-// #include "package.h"
-// void init_and_print_pool_info() {
+/*测试数据包接口*/
+// 用于初始化包池和打印信息
+#include "stdio.h"
+#include "package.h"
+void init_and_print_pool_info() {
 
-//     package_pool_init();
+    package_pool_init();
 
-//     package_show_pool_info();
+    package_show_pool_info();
 
-// }
+}
 
-// // 测试创建包和添加头信息
+// 测试创建包和添加头信息
 
-// void test_create_and_add_header() {
+void test_create_and_add_header() {
 
-//     uint8_t data_buf[256] = {0};  // 示例数据缓冲区
+    uint8_t data_buf[256] = {0};  // 示例数据缓冲区
 
-//     pkg_t *package = package_create(data_buf, sizeof(data_buf));
+    pkg_t *package = package_create(data_buf, sizeof(data_buf));
 
-//     if (!package) {
+    if (!package) {
 
-//         fprintf(stderr, "Failed to create package\n");
+        fprintf(stderr, "Failed to create package\n");
 
-//         return;
+        return;
 
-//     }
+    }
 
-//     uint8_t head_buf[16] = "HEADER_DATA";  // 示例头信息
+    uint8_t head_buf[16] = "HEADER_DATA";  // 示例头信息
 
-//     if (package_add_header(package, head_buf, sizeof(head_buf)) != 0) {
+    if (package_add_header(package, head_buf, sizeof(head_buf)) != 0) {
 
-//         fprintf(stderr, "Failed to add header\n");
+        fprintf(stderr, "Failed to add header\n");
 
-//         package_alloc(0);  // 释放包（假设这是释放包的正确方式，具体根据实现）
+        package_alloc(0);  // 释放包（假设这是释放包的正确方式，具体根据实现）
 
-//         return;
+        return;
 
-//     }
+    }
 
-//     package_show_info(package);
+    package_show_info(package);
 
-//     package_alloc(0);  // 释放包
+   
 
-// }
+}
 
-// // 测试写入、读取和内存操作
+// 测试写入、读取和内存操作
 
-// void test_write_read_memory_ops() {
+void test_write_read_memory_ops() {
 
-//     uint8_t buf[956];
-//     for(int i=  0;i<956;++i)
-//     {
-//         buf[i]=('a'+i)%24;
-//     }
-//     pkg_t *pkg = package_create(buf,956);
-//     package_print(pkg);
-//     pkg_t* dest = package_alloc(6);
-//     package_copy(dest,pkg);
-//     package_print(dest);
+    int ret;
+    pkg_t* pkg = package_alloc(1024);
+    ret = package_write(pkg,"hello",strlen("hello"));
+    package_print(pkg);
+    package_lseek(pkg,ret);
+    package_write(pkg,"world",strlen("world"));
+    package_print(pkg);
 
 
-// }
-// void test_package(void)
-// {
-//     init_and_print_pool_info();
-//     test_create_and_add_header();
-//     test_write_read_memory_ops();
-//     package_pool_destory();
-// }
+}
+void test_package(void)
+{
+    init_and_print_pool_info();
+    test_create_and_add_header();
+    test_write_read_memory_ops();
+    package_pool_destory();
+}
 // #include "ipaddr.h"
 // void test_ipaddr(void)
 // {
@@ -357,7 +354,7 @@ DEFINE_THREAD_FUNC(app)
         // 这里模拟应用程序不断向workbench发送数据包
         char *tmp = "app test";
         pkg_t *app_pkg = package_create(tmp, strlen(tmp));
-        workbench_put_stuff(app_pkg);
+        workbench_put_stuff(app_pkg,NULL);
         sleep(20); // 主进程不退出，子线程都是死循环，回收不了
     }
 }
@@ -408,7 +405,7 @@ int main(int agrc, char *argv[])
     //  test_locks();
     //  test_semaphores();
     // test_mempool();
-     //test_package();
+    // test_package();
     // test_ipaddr();
     test_worker();
     return 0;

@@ -5,7 +5,7 @@ uint8_t rbuf[256] ;
     for (int i = 0; i < pkg->total; ++i)
     {
 
-        printf("%x ", buf[i]);
+       dbg_info("%x ", buf[i]);
         
     }
-    printf("\r\n");
+   dbg_info("\r\n");

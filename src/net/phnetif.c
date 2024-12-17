@@ -42,6 +42,7 @@ int phnetif_open(netif_t *netif, void *ex_data)
         return -1;
     }
     netif->info.type = NETIF_TYPE_ETH;
+    
     phnetif_drive_data_t *data = (phnetif_drive_data_t *)ex_data;
     netif_card_info_t *card_info = data->card_info;
 
@@ -70,14 +71,14 @@ int phnetif_close(netif_t *netif)
 int phnetif_send(netif_t *netif, const uint8_t *buf, int len)
 {
     int ret;
-    printf("send a package \r\n");
+   dbg_info("send a package \r\n");
     for (int i = 0; i < len; ++i)
     {
 
-        printf("%x ", buf[i]);
+       dbg_info("%x ", buf[i]);
         
     }
-    printf("\r\n");
+   dbg_info("\r\n");
     phnetif_drive_data_t *exdata = (phnetif_drive_data_t *)netif->ex_data;
     ret = pcap_send_pkg(exdata->handler, buf, len);
     return ret;
@@ -92,14 +93,14 @@ int phnetif_receive(netif_t *netif, const uint8_t **buf, int len)
     int cpy_size = ret > len ? len : ret;
     *buf = malloc(cpy_size);
     memcpy(*buf, rbuf, cpy_size);
-    printf("receive a package,put into in_queue\r\n");
+   dbg_info("receive a package,put into in_queue\r\n");
     for (int i = 0; i < cpy_size; ++i)
     {
 
-        printf("%x ", (*buf)[i]);
+       dbg_info("%x ", (*buf)[i]);
         
     }
-    printf("\r\n");
+   dbg_info("\r\n");
 
     return cpy_size;
 }

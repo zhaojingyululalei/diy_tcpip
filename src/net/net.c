@@ -22,6 +22,9 @@ void net_system_init(void)
     threadpool_init(&netthread_pool,&pool_attr);
     //netif链表
     netif_init();
+
+    //数据链路层初始化
+    ether_init();
     return;
     
 }

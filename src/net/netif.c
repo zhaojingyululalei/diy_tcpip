@@ -77,16 +77,28 @@ static mempool_t netif_pool;
 static netif_t netifs[NETIF_MAX_NR * (sizeof(netif_t) + sizeof(list_node_t))];
 static list_t netif_list;
 static lock_t netif_list_locker;
+static link_layer_t* link_layers[NETIF_TYPE_SIZE];
+int netif_register_link_layer(link_layer_t* layer)
+{
+    netif_type_t type = layer->type;
+    if(type>=NETIF_TYPE_SIZE || type<=0)
+    {
+        dbg_error("register link layer fail\r\n");
+        return -1;
+    }
+    link_layers[type] = layer;
+    return 0;
+}
 void print_netif_list(void)
 {
     list_node_t *current_node = list_first(&netif_list); // 获取链表的第一个节点
 
-    printf("Netif List:\n");
-    printf("---------------------------------------------------------------------------------\n");
-    printf("| ID   | Name          | Type       | IP           | MAC Address         |\n");
-    printf("|      |               |            | Gateway      |                    |\n");
-    printf("|      |               |            | Mask         |                    |\n");
-    printf("---------------------------------------------------------------------------------\n");
+   dbg_info("Netif List:\n");
+   dbg_info("---------------------------------------------------------------------------------\n");
+   dbg_info("| ID   | Name          | Type       | IP           | MAC Address         |\n");
+   dbg_info("|      |               |            | Gateway      |                    |\n");
+   dbg_info("|      |               |            | Mask         |                    |\n");
+   dbg_info("---------------------------------------------------------------------------------\n");
 
     while (current_node)
     {
@@ -121,10 +133,10 @@ void print_netif_list(void)
                  netif->macaddr[2], netif->macaddr[1], netif->macaddr[0]);
 
         // 打印信息
-        printf("| %-4d | %-13s | %-10s | %-11s | %-17s |\n", netif->id, netif->info.name, type_str, ip_str, mac_str);
-        printf("|      |               |            | %-11s |                    |\n", gateway_str);
-        printf("|      |               |            | %-11s |                    |\n", mask_str);
-        printf("---------------------------------------------------------------------------------\n");
+       dbg_info("| %-4d | %-13s | %-10s | %-11s | %-17s |\n", netif->id, netif->info.name, type_str, ip_str, mac_str);
+       dbg_info("|      |               |            | %-11s |                    |\n", gateway_str);
+       dbg_info("|      |               |            | %-11s |                    |\n", mask_str);
+       dbg_info("---------------------------------------------------------------------------------\n");
 
         // 获取下一个节点
         current_node = list_node_next(current_node);
@@ -164,6 +176,8 @@ netif_t *netif_register(const netif_info_t *info, const netif_ops_t *ops, void *
     {
         netif->macaddr[i] = card->mac[i];
     }
+
+    
     return netif;
 }
 netif_t *netif_virtual_register(const netif_info_t *info, const netif_ops_t *ops,  void *ex_data)
@@ -182,6 +196,7 @@ netif_t *netif_virtual_register(const netif_info_t *info, const netif_ops_t *ops
     free(info);
     netif->id = PCAP_NETIF_DRIVE_ARR_MAX + list_count(&netif_list);
     netif->mtu = 1500;
+    
     return netif;
 }
 int netif_free(netif_t *netif)
@@ -278,6 +293,8 @@ int netif_open(netif_t *netif)
     }
 
     ret = netif->ops->open(netif, netif->ex_data); // 调用驱动
+    //注册数据链路层操作
+    netif->link_ops = link_layers[netif->info.type];
     if(ret <0 )
     {
         return ret;

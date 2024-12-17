@@ -20,4 +20,5 @@ typedef struct _ether_pkg_t
 
 #pragma pack()
 
+void ether_init(void);
 #endif

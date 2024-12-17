@@ -1,6 +1,6 @@
 
 #include "net_drive.h"
-
+#include "debug.h"
 /**
  * 根据ip地址查找本地网络接口列表，找到相应的名称
  */
@@ -165,7 +165,7 @@ void pcap_drive_init(void)
             }
             const char *ip = inet_ntop(AF_INET, &ip_addr->sin_addr, str, sizeof(str));
             strncpy(net_drive_info.pcap_netif_drive_arr[net_drive_info.num].ipv4, ip, strlen(ip));
-            printf("%d: IP: %s, MAC: %s, name: %s\n", count++,
+           printf("%d: IP: %s, MAC: %s, name: %s\n", count++,
                    ip,
                    mac_str[0] ? mac_str : "N/A", // If MAC address is available, print it
                    name ? name : "unknown");
@@ -206,8 +206,8 @@ int pcap_show_list(void)
         pcap_freealldevs(pcapif_list);
         return -1;
     }
-    printf("******************************************\n");
-    printf("net card list: \n");
+   printf("******************************************\n");
+   printf("net card list: \n");
 
     // 遍历所有的可用接口，输出其信息
     for (pcap_if_t *item = pcapif_list; item != NULL; item = item->next)
@@ -254,7 +254,7 @@ int pcap_show_list(void)
             {
                 name = item->name;
             }
-            printf("%d: IP: %s, MAC: %s, name: %s\n", count++,
+           printf("%d: IP: %s, MAC: %s, name: %s\n", count++,
                    inet_ntop(AF_INET, &ip_addr->sin_addr, str, sizeof(str)),
                    mac_str[0] ? mac_str : "N/A", // If MAC address is available, print it
                    name ? name : "unknown");
@@ -270,7 +270,7 @@ int pcap_show_list(void)
         return -1;
     }
 
-    printf("******************************************\n");
+   printf("******************************************\n");
     return 0;
 }
 
@@ -295,7 +295,7 @@ pcap_t *pcap_device_open(const char *ip, const uint8_t *mac_addr)
     bpf_u_int32 net;
     if (pcap_lookupnet(name_buf, &net, &mask, err_buf) == -1)
     {
-        printf("pcap_lookupnet error: no net card: %s\n", name_buf);
+       printf("pcap_lookupnet error: no net card: %s\n", name_buf);
         net = 0;
         mask = 0;
     }
@@ -356,12 +356,12 @@ pcap_t *pcap_device_open(const char *ip, const uint8_t *mac_addr)
             mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
     if (pcap_compile(pcap, &fp, filter_exp, 0, net) == -1)
     {
-        printf("pcap_open: couldn't parse filter %s: %s\n", filter_exp, pcap_geterr(pcap));
+       printf("pcap_open: couldn't parse filter %s: %s\n", filter_exp, pcap_geterr(pcap));
         return (pcap_t *)0;
     }
     if (pcap_setfilter(pcap, &fp) == -1)
     {
-        printf("pcap_open: couldn't install filter %s: %s\n", filter_exp, pcap_geterr(pcap));
+       printf("pcap_open: couldn't install filter %s: %s\n", filter_exp, pcap_geterr(pcap));
         return (pcap_t *)0;
     }
     return pcap;
@@ -384,7 +384,7 @@ int pcap_recv_pkg(pcap_t *handler, const uint8_t **pkg_data)
     }
     else
     {
-        printf("%s\r\n",*pkg_data);
+       printf("%s\r\n",*pkg_data);
         return pkg_info->len;
     }
 }

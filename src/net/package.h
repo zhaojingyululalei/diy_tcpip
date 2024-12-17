@@ -11,6 +11,7 @@ typedef struct _pkg_dblk_t{
     list_node_t node;
     int size;
     int offset; //数据块起始地址偏移
+    
     uint8_t data[PKG_DATA_BLK_SIZE];
 }pkg_dblk_t;
 
@@ -21,7 +22,7 @@ typedef struct _pkg_t{
 
     int pos; //指向下一个空白位置
     pkg_dblk_t* curblk;
-
+    int inner_offset;//当前数据块的内部偏移
 }pkg_t; 
 
 
@@ -46,13 +47,14 @@ int package_pool_destory(void);
 int package_integrate_header(pkg_t* package,int all_hsize);
 int package_join(pkg_t* from,pkg_t* to);
 //返回写入长度
-int package_write(pkg_t *package, uint8_t *buf, int len);
+int package_write(pkg_t *package, const uint8_t *buf, int len);
 int package_read(pkg_t *package, uint8_t *buf, int len);
 int package_lseek(pkg_t *package, int offset);
 int package_memset(pkg_t *package, int offset, uint8_t value, int len);
 int package_memcpy(pkg_t *dest_pkg, int dest_offset, pkg_t *src_pkg, int src_offset, int len);
 int package_copy(pkg_t* dest_pkg,pkg_t* src_pkg);
 void package_print(pkg_t* pkg);
+uint8_t *package_data(pkg_t *pkg);
 //创建包并直接写入数据
 pkg_t*  package_create(uint8_t* data_buf,int len);
 //创建空白包，稍后写入数据

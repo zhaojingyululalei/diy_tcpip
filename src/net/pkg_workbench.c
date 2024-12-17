@@ -16,17 +16,16 @@ void workbench_init(void)
     mempool_init(&wb_stuff_pool,&wb_stuff_buf,WORKBENCH_STUFF_CAPCITY,sizeof(wb_stuff_t));
 }
 
-pkg_t* workbench_get_stuff(void)
+wb_stuff_t* workbench_get_stuff(void)
 {
-    pkg_t* ret = NULL;
+    
     wb_stuff_t* stuff = (wb_stuff_t*)msgQ_dequeue(&workbench,0);//阻塞等
-    ret = stuff->package;
-    mempool_free_blk(&wb_stuff_pool,stuff);//stuff放回内存池
-    return ret;
+   return stuff;
+    
 
 }
 
-void workbench_put_stuff(pkg_t* package)
+void workbench_put_stuff(pkg_t* package,netif_t* netif)
 {
     wb_stuff_t* stuff = (wb_stuff_t*)mempool_alloc_blk(&wb_stuff_pool,-1);//非阻塞
     if(!stuff)
@@ -35,8 +34,13 @@ void workbench_put_stuff(pkg_t* package)
         return;
     }
     stuff->package = package;
+    stuff->netif = netif;
     msgQ_enqueue(&workbench,stuff,-1);
     return;
 }
 
+int workbench_collect_stuff(wb_stuff_t* stuff)
+{
+   return mempool_free_blk(&wb_stuff_pool,stuff);//stuff放回内存池
+}
 

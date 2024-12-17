@@ -18,7 +18,7 @@ DEFINE_THREAD_FUNC(mover)
             if (pkg)
             {
 
-                workbench_put_stuff(pkg);
+                workbench_put_stuff(pkg, cur);
                 dbg_info("mover put a stuff on workbench\n");
                 break;
             }
@@ -27,11 +27,16 @@ DEFINE_THREAD_FUNC(mover)
     }
 }
 
-pkg_t *handle(pkg_t *pkg)
+pkg_t *handle(netif_t* netif,pkg_t *pkg)
 {
-    uint8_t buf[2] = {0x55,0xAA};
-    package_lseek(pkg,0);
-    package_write(pkg,buf,2);
+    uint8_t buf[2] = {0x55, 0xAA};
+    package_lseek(pkg, 0);
+    package_write(pkg, buf, 2);
+    //如果数据链路层操作存在，将数据包交给数据链路层处理
+    if(netif->link_ops)
+    {
+        netif->link_ops->in(netif,pkg);
+    }
     return NULL;
 }
 // 从工作台拿东西进行处理
@@ -40,23 +45,25 @@ DEFINE_THREAD_FUNC(worker)
     while (1)
     {
         uint8_t *buf = NULL;
-        pkg_t *pkg = workbench_get_stuff();
+        wb_stuff_t *stuff = workbench_get_stuff();
+        pkg_t *pkg = stuff->package;
+        netif_t *netif = stuff->netif;
+        workbench_collect_stuff(stuff);
         dbg_info("worker get stuff pakcage,len = %d\n", pkg->total);
-        handle(pkg);
+        handle(netif,pkg);
         // 向哪个网卡发，得解析包头判断，这里测试，默认向loop发
         //  netif_t* loop = netif_first();
         //  netif_putpkg(&loop->out_q,newpack);
 
-        // 向哪个网卡发，得解析包头判断，这里测试向物理网卡发
-        netif_t *cur_netif = netif_first();
-        while (cur_netif)
+        
+        if (netif) //这个数据包来自网卡，经过处理，再由该网卡发出
         {
-            if (cur_netif->info.type == NETIF_TYPE_ETH)
-            {
-                netif_putpkg(&cur_netif->out_q, pkg);
-                break;
-            }
-            cur_netif = netif_next(cur_netif);
+
+            netif_putpkg(&netif->out_q, pkg);
+        }
+        else  //该数据包来自应用程序，并非某个网卡
+        {
+            
         }
     }
 }
