@@ -731,6 +731,22 @@ int package_read(pkg_t *package, uint8_t *buf, int len)
     return len - remain_size; // 返回实际读取的字节数
 }
 
+int package_write_pos(pkg_t *package, const uint8_t *buf, int len,int position)
+{
+    if(position>=0)
+    {
+        package_lseek(package,position);
+    }
+    package_write(package,buf,len);
+}
+int package_read_pos(pkg_t *package, uint8_t *buf, int len,int position)
+{
+    if(position>=0)
+    {
+        package_lseek(package,position);
+    }
+    package_read(package,buf,len);
+}
 int package_lseek(pkg_t *package, int offset)
 {
     lock(&pkg_locker);
@@ -915,13 +931,24 @@ void package_print(pkg_t *pkg)
     free(rbuf);
 }
 
-uint8_t *package_data(pkg_t *pkg)
+
+uint8_t *package_data(pkg_t *pkg,int len,int position)
 {
     if (!pkg || !pkg->curblk)
     {
         return NULL; // 检查空指针情况
     }
-
+    if(len<0 || len >PKG_DATA_BLK_SIZE)
+    {
+        dbg_error("len is wrong\r\n");
+        return NULL;
+    }
+    if(position>=0)
+    {
+        package_lseek(pkg,position);
+    }
+    package_integrate_header(pkg,len);
+    package_lseek(pkg,pkg->pos);//数据包头整合后，curk或者pos等会受影响，重新定位
     uint8_t *ret = &pkg->curblk->data[pkg->curblk->offset + pkg->inner_offset];
     return ret;
 }

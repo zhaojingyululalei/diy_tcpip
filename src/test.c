@@ -308,21 +308,13 @@ void test_create_and_add_header() {
 // 测试写入、读取和内存操作
 
 void test_write_read_memory_ops() {
+    char* str = "hello world";
+    char* head = "zhaoj";
+    pkg_t* pkg = package_create(str,strlen(str));
+    package_add_header(pkg,head,strlen(head));
+    char* ret = package_data(pkg,16,0);
+    printf("%s\r\n",ret);
 
-    int ret;
-    pkg_t* pkg = package_alloc(1024);
-    ret = package_write(pkg,"hello",strlen("hello"));
-    package_lseek(pkg,0);
-    char* x = package_data(pkg);
-    printf("%s\r\n",x);
-    // package_print(pkg);
-    package_lseek(pkg,ret);
-   
-    package_write(pkg,"world",strlen("world"));
-    package_lseek(pkg,ret);
-    char* data = package_data(pkg);
-    printf("%s\r\n",data);
-    //package_print(pkg);
 
 
 }
@@ -412,7 +404,7 @@ int main(int agrc, char *argv[])
     //  test_locks();
     //  test_semaphores();
     // test_mempool();
-     //test_package();
+    //test_package();
     // test_ipaddr();
     test_worker();
     return 0;

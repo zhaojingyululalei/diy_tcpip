@@ -49,12 +49,14 @@ int package_join(pkg_t* from,pkg_t* to);
 //返回写入长度
 int package_write(pkg_t *package, const uint8_t *buf, int len);
 int package_read(pkg_t *package, uint8_t *buf, int len);
+int package_write_pos(pkg_t *package, const uint8_t *buf, int len,int postion);
+int package_read_pos(pkg_t *package, uint8_t *buf, int len,int position);
 int package_lseek(pkg_t *package, int offset);
 int package_memset(pkg_t *package, int offset, uint8_t value, int len);
 int package_memcpy(pkg_t *dest_pkg, int dest_offset, pkg_t *src_pkg, int src_offset, int len);
 int package_copy(pkg_t* dest_pkg,pkg_t* src_pkg);
 void package_print(pkg_t* pkg);
-uint8_t *package_data(pkg_t *pkg);
+uint8_t *package_data(pkg_t *pkg,int len,int position);
 //创建包并直接写入数据
 pkg_t*  package_create(uint8_t* data_buf,int len);
 //创建空白包，稍后写入数据
