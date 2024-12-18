@@ -27,43 +27,55 @@ DEFINE_THREAD_FUNC(mover)
     }
 }
 
-pkg_t *handle(netif_t* netif,pkg_t *pkg)
+static int handle(netif_t *netif, pkg_t *pkg)
 {
-    uint8_t buf[2] = {0x55, 0xAA};
-    package_lseek(pkg, 0);
-    package_write(pkg, buf, 2);
-    //如果数据链路层操作存在，将数据包交给数据链路层处理
-    if(netif->link_ops)
+    int ret = 0;
+    // uint8_t buf[2] = {0x55, 0xAA};
+    // package_lseek(pkg, 0);
+    // package_write(pkg, buf, 2);
+    // 如果数据链路层操作存在，将数据包交给数据链路层处理
+    if (netif->link_ops)
     {
-        netif->link_ops->in(netif,pkg);
+        ret = netif->link_ops->in(netif, pkg);
+        if (ret < 0)
+        {
+            // 数据包处理错误，直接丢弃回收
+            package_collect(pkg);
+            dbg_warning("ether pkg handle fail\r\n");
+            return ret;
+        }
     }
-    return NULL;
+    else{
+        //数据链路层不存在
+        package_collect(pkg);
+        return -2;
+    }
+    return 0;
 }
 // 从工作台拿东西进行处理
 DEFINE_THREAD_FUNC(worker)
 {
+    int ret;
     while (1)
     {
         uint8_t *buf = NULL;
-        wb_stuff_t *stuff = workbench_get_stuff();
+        wb_stuff_t *stuff = workbench_get_stuff();//阻塞等
         pkg_t *pkg = stuff->package;
         netif_t *netif = stuff->netif;
         workbench_collect_stuff(stuff);
         dbg_info("worker get stuff pakcage,len = %d\n", pkg->total);
-        handle(netif,pkg);
-        // 向哪个网卡发，得解析包头判断，这里测试，默认向loop发
-        //  netif_t* loop = netif_first();
-        //  netif_putpkg(&loop->out_q,newpack);
-
-        
-        if (netif) //这个数据包来自网卡，经过处理，再由该网卡发出
+        ret = handle(netif, pkg);
+        //数据包处理正确，才可以往out_q里面放
+        if (ret >= 0)
         {
+            if (netif) // 这个数据包来自网卡，经过处理，再由该网卡发出
+            {
 
-            netif_putpkg(&netif->out_q, pkg);
-        }
-        else  //该数据包来自应用程序，并非某个网卡
-        {
-            
+                netif_putpkg(&netif->out_q, pkg);
+            }
+            else // 该数据包来自应用程序，并非某个网卡
+            {
+            }
         }
     }
 }

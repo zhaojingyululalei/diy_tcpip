@@ -71,6 +71,7 @@ int phnetif_close(netif_t *netif)
 int phnetif_send(netif_t *netif, const uint8_t *buf, int len)
 {
     int ret;
+#ifdef DBG_THREAD_PRINT
    dbg_info("send a package \r\n");
     for (int i = 0; i < len; ++i)
     {
@@ -79,6 +80,7 @@ int phnetif_send(netif_t *netif, const uint8_t *buf, int len)
         
     }
    dbg_info("\r\n");
+#endif
     phnetif_drive_data_t *exdata = (phnetif_drive_data_t *)netif->ex_data;
     ret = pcap_send_pkg(exdata->handler, buf, len);
     return ret;
@@ -93,6 +95,7 @@ int phnetif_receive(netif_t *netif, const uint8_t **buf, int len)
     int cpy_size = ret > len ? len : ret;
     *buf = malloc(cpy_size);
     memcpy(*buf, rbuf, cpy_size);
+#ifdef DBG_THREAD_PRINT
    dbg_info("receive a package,put into in_queue\r\n");
     for (int i = 0; i < cpy_size; ++i)
     {
@@ -101,6 +104,6 @@ int phnetif_receive(netif_t *netif, const uint8_t **buf, int len)
         
     }
    dbg_info("\r\n");
-
+#endif
     return cpy_size;
 }

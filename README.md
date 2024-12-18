@@ -9,3 +9,5 @@ uint8_t rbuf[256] ;
         
     }
    dbg_info("\r\n");
+
+   760	4398.126458763	192.168.169.10	192.168.169.20	ICMP	98	Echo (ping) reply    id=0x0018, seq=1/256, ttl=64 (request in 759)

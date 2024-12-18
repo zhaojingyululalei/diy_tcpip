@@ -384,7 +384,7 @@ int pcap_recv_pkg(pcap_t *handler, const uint8_t **pkg_data)
     }
     else
     {
-       printf("%s\r\n",*pkg_data);
+       printf("\r\n");
         return pkg_info->len;
     }
 }

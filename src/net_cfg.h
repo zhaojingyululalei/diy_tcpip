@@ -28,5 +28,7 @@
 #define NETIF_PH_MASK       "255.255.255.0"
 #define NETIF_PH_GATEWAY    "192.168.128.2"
 
+//#define DBG_THREAD_PRINT
+#define DBG_EHTER_PRINT
 
 #endif

@@ -422,7 +422,7 @@ int netif_close(netif_t *netif)
 
 pkg_t *netif_getpkg(msgQ_t *queue)
 {
-    return msgQ_dequeue(queue, -1);
+    return msgQ_dequeue(queue, 0);
 }
 
 int netif_putpkg(msgQ_t *queue, pkg_t *pkg)
@@ -439,7 +439,7 @@ int netif_send_simulate(netif_t *netif)
     {
         return -1;
     }
-    pkg_t *pkg = netif_getpkg(&netif->out_q);
+    pkg_t *pkg = netif_getpkg(&netif->out_q);//阻塞等，队列里没东西就等
     if (!pkg)
     {
         return 0;

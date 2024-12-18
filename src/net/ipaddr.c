@@ -63,25 +63,75 @@ int ipaddr_n2s(const ipaddr_t *ip_addr, char *ip_str, size_t str_len) {
     return 0; 
 }
 /*主机小端对齐，网络大端对齐(低字节在高地址)*/
-uint8_t* h2n(const uint8_t* arr,int len)
+void h2n(const void* arr,int len,void* data)
 {
-    uint8_t* ret = malloc(len);
+    uint8_t* arrx = (uint8_t*)arr;
+    uint8_t* ret = (uint8_t*)data;
     for (int i = 0; i < len; i++)
     {
-        ret[i] = arr[len-1-i];
+        ret[i] = arrx[len-1-i];
     }
-    return ret;
+    return ;
     
 }
 
-uint8_t* n2h(const uint8_t* arr,int len)
+void n2h(const void* arr,int len,void* data)
 {
-    uint8_t* ret = malloc(len);
+    uint8_t* arrx = (uint8_t*)arr;
+    uint8_t* ret = (uint8_t*)data;
     for (int i = 0; i < len; i++)
     {
-        ret[i] = arr[len-1-i];
+        ret[i] = arrx[len-1-i];
     }
-    return ret;
+    return ;
     
+}
+
+
+
+int mac_n2s(const uint8_t* mac, char* mac_str)
+{
+    // 用于存放一个 MAC 地址的字符串表示（格式：xx:xx:xx:xx:xx:xx）
+    // 每个字节是两位十六进制数，使用冒号分隔
+    for (int i = 0; i < 6; ++i) {
+        // 每个字节需要转成两位十六进制字符，%02x 表示输出两位，不足补零
+        sprintf(mac_str + (i * 3), "%02x", mac[i]);
+        
+        // 如果不是最后一个字节，插入冒号
+        if (i < 5) {
+            mac_str[(i * 3) + 2] = ':';
+        }
+    }
+    mac_str[17] = '\0';  // 结束符，17是因为6个字节 * 3 + 1个结束符
+    return 0;
+}
+
+int mac_s2n(uint8_t* mac, const char* mac_str)
+{
+    int j = 0;
+    
+    for (int i = 0; i < 17; i += 3) { // 每次读取3个字符，两个十六进制字符和一个冒号
+        // 如果是冒号跳过
+        if (mac_str[i] == ':') {
+            continue;
+        }
+
+        // 将两个十六进制字符转换为一个字节
+        uint8_t byte = 0;
+        for (int k = 0; k < 2; ++k) {
+            byte <<= 4;
+            if (mac_str[i + k] >= '0' && mac_str[i + k] <= '9') {
+                byte |= (mac_str[i + k] - '0');
+            } else if (mac_str[i + k] >= 'a' && mac_str[i + k] <= 'f') {
+                byte |= (mac_str[i + k] - 'a' + 10);
+            } else if (mac_str[i + k] >= 'A' && mac_str[i + k] <= 'F') {
+                byte |= (mac_str[i + k] - 'A' + 10);
+            }
+        }
+
+        mac[j++] = byte; // 将字节存入数组
+    }
+
+    return 0;
 }
 
