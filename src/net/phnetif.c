@@ -46,8 +46,8 @@ int phnetif_open(netif_t *netif, void *ex_data)
     phnetif_drive_data_t *data = (phnetif_drive_data_t *)ex_data;
     netif_card_info_t *card_info = data->card_info;
 
-    // 主机是大端存储
-    uint8_t *mac_addr = h2n(card_info->mac, 6);
+    
+    uint8_t *mac_addr = card_info->mac;
 
     pcap_t *handler = pcap_device_open(card_info->ipv4, mac_addr);
     if (!handler)
@@ -57,7 +57,7 @@ int phnetif_open(netif_t *netif, void *ex_data)
     }
     data->handler = handler;
 
-    free(mac_addr);
+    
 
     return 0;
 }
