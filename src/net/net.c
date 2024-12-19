@@ -11,6 +11,7 @@ threadpool_t netthread_pool;
  */
 void net_system_init(void)
 {
+    soft_timer_init();
     //物理网卡检测
     pcap_drive_init();
     package_pool_init();

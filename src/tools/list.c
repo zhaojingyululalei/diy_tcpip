@@ -57,7 +57,56 @@ void list_insert_last(list_t *list, list_node_t *node) {
 
     list->count++;
 }
+/**
+ * 将insert_node插入到pos_node的后面
+ */
+void list_insert_behind(list_t *list, list_node_t *pos_node, list_node_t *insert_node)
+{
+    // 设置待插入结点的前后关系
+    insert_node->pre = pos_node;
+    insert_node->next = pos_node->next;
 
+    // 如果 pos_node 是最后一个结点，需要更新链表的 last
+    if (pos_node == list->last)
+    {
+        list->last = insert_node;
+    }
+    else
+    {
+        // 否则，调整 pos_node 后继结点的前向指针
+        pos_node->next->pre = insert_node;
+    }
+
+    // 调整 pos_node 的后继指针
+    pos_node->next = insert_node;
+
+    // 更新链表结点数量
+    list->count++;
+}
+/*将insert_node插入到pos_node前面*/
+void list_insert_front(list_t *list, list_node_t *pos_node, list_node_t *insert_node)
+{
+    // 设置待插入结点的前后关系
+    insert_node->next = pos_node;
+    insert_node->pre = pos_node->pre;
+
+    // 如果 pos_node 是第一个结点，需要更新链表的 first
+    if (pos_node == list->first)
+    {
+        list->first = insert_node;
+    }
+    else
+    {
+        // 否则，调整 pos_node 前驱结点的后向指针
+        pos_node->pre->next = insert_node;
+    }
+
+    // 调整 pos_node 的前驱指针
+    pos_node->pre = insert_node;
+
+    // 更新链表结点数量
+    list->count++;
+}
 /**
  * 移除指定链表的头部
  * @param list 操作的链表

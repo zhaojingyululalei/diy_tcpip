@@ -63,10 +63,10 @@ int ipaddr_n2s(const ipaddr_t *ip_addr, char *ip_str, size_t str_len) {
     return 0; 
 }
 /*主机小端对齐，网络大端对齐(低字节在高地址)*/
-void h2n(const void* arr,int len,void* data)
+void h2n(const void* host,int len,void* net)
 {
-    uint8_t* arrx = (uint8_t*)arr;
-    uint8_t* ret = (uint8_t*)data;
+    uint8_t* arrx = (uint8_t*)host;
+    uint8_t* ret = (uint8_t*)net;
     for (int i = 0; i < len; i++)
     {
         ret[i] = arrx[len-1-i];
@@ -75,10 +75,10 @@ void h2n(const void* arr,int len,void* data)
     
 }
 
-void n2h(const void* arr,int len,void* data)
+void n2h(const void* net,int len,void* host)
 {
-    uint8_t* arrx = (uint8_t*)arr;
-    uint8_t* ret = (uint8_t*)data;
+    uint8_t* arrx = (uint8_t*)net;
+    uint8_t* ret = (uint8_t*)host;
     for (int i = 0; i < len; i++)
     {
         ret[i] = arrx[len-1-i];

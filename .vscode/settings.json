@@ -43,6 +43,7 @@
         "limits": "c",
         "memory": "c",
         "new": "c",
-        "functional": "c"
+        "functional": "c",
+        "soft_timer.h": "c"
     },
 }

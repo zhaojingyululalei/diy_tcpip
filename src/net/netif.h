@@ -111,6 +111,8 @@ int netif_open(netif_t *netif);
 int netif_activate(netif_t *netif);
 int netif_shutdown(netif_t *netif);
 int netif_close(netif_t *netif);
+#include "protocal.h"
+int netif_out(netif_t* netif,pkg_t* pkg,uint8_t* desc,uint8_t*src,protocal_type_t type);
 
 pkg_t *netif_getpkg(msgQ_t *queue);
 int netif_putpkg(msgQ_t *queue, pkg_t *pkg);

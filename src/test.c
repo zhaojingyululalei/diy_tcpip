@@ -263,60 +263,56 @@
 // 用于初始化包池和打印信息
 #include "stdio.h"
 #include "package.h"
-void init_and_print_pool_info() {
+void init_and_print_pool_info()
+{
 
     package_pool_init();
 
     package_show_pool_info();
-
 }
 
 // 测试创建包和添加头信息
 
-void test_create_and_add_header() {
+void test_create_and_add_header()
+{
 
-    uint8_t data_buf[256] = {0};  // 示例数据缓冲区
+    uint8_t data_buf[256] = {0}; // 示例数据缓冲区
 
     pkg_t *package = package_create(data_buf, sizeof(data_buf));
 
-    if (!package) {
+    if (!package)
+    {
 
         fprintf(stderr, "Failed to create package\n");
 
         return;
-
     }
 
-    uint8_t head_buf[16] = "HEADER_DATA";  // 示例头信息
+    uint8_t head_buf[16] = "HEADER_DATA"; // 示例头信息
 
-    if (package_add_header(package, head_buf, sizeof(head_buf)) != 0) {
+    if (package_add_header(package, head_buf, sizeof(head_buf)) != 0)
+    {
 
         fprintf(stderr, "Failed to add header\n");
 
-        package_alloc(0);  // 释放包（假设这是释放包的正确方式，具体根据实现）
+        package_alloc(0); // 释放包（假设这是释放包的正确方式，具体根据实现）
 
         return;
-
     }
 
     package_show_info(package);
-
-   
-
 }
 
 // 测试写入、读取和内存操作
 
-void test_write_read_memory_ops() {
-    char* str = "hello world";
-    char* head = "zhaoj";
-    pkg_t* pkg = package_create(str,strlen(str));
-    package_add_header(pkg,head,strlen(head));
-    char* ret = package_data(pkg,16,0);
-    printf("%s\r\n",ret);
-
-
-
+void test_write_read_memory_ops()
+{
+    char *str = "hello world";
+    char *head = "zhaoj";
+    pkg_t *pkg = package_create(str, strlen(str));
+    package_add_header(pkg, head, strlen(head));
+    char *ret = package_data(pkg, 16, 0);
+    printf("%s\r\n", ret);
 }
 void test_package(void)
 {
@@ -353,7 +349,7 @@ DEFINE_THREAD_FUNC(app)
         // 这里模拟应用程序不断向workbench发送数据包
         char *tmp = "app test";
         pkg_t *app_pkg = package_create(tmp, strlen(tmp));
-        workbench_put_stuff(app_pkg,NULL);
+        workbench_put_stuff(app_pkg, NULL);
         sleep(20); // 主进程不退出，子线程都是死循环，回收不了
     }
 }
@@ -385,6 +381,7 @@ void test_phnetif(void)
     print_netif_list();
     netif_activate(netif);
 
+    // netif_out(netif,)
     while (1)
     {
         sleep(1);
@@ -396,17 +393,79 @@ void test_worker(void)
     net_system_start();
     test_phnetif();
 }
+#include "soft_timer.h"
+DEFINE_TIMER_FUNC(timer_0_handle)
+{
+    int *x = (int *)arg;
+    int *ret = malloc(sizeof(int));
+    *ret = *x + 10;
+    dbg_info("in timer handler .. arg:%d  ret:%d\r\n", *x, *ret);
+    return ret;
+}
+DEFINE_TIMER_FUNC(timer_1_handle)
+{
+    int *x = (int *)arg;
+    int *ret = malloc(sizeof(int));
+    *ret = *x + 10;
+    dbg_info("in timer handler .. arg:%d  ret:%d\r\n", *x, *ret);
+    return ret;
+}
+DEFINE_TIMER_FUNC(timer_2_handle)
+{
+    int *x = (int *)arg;
+    int *ret = malloc(sizeof(int));
+    *ret = *x + 10;
+    dbg_info("in timer handler .. arg:%d  ret:%d\r\n", *x, *ret);
+    return ret;
+}
+DEFINE_TIMER_FUNC(timer_3_handle)
+{
+    int *x = (int *)arg;
+    int *ret = malloc(sizeof(int));
+    *ret = *x + 10;
+    dbg_info("in timer handler .. arg:%d  ret:%d\r\n", *x, *ret);
+    return ret;
+}
+void timer_test(void)
+{
+    soft_timer_t timer_0, timer_1, timer_2,timer_3;
+    int a = 0, b = 1, c = 2,d=3;
+    int *ret0 = NULL;
+    int *ret1 = NULL;
+    int *ret2 = NULL;
+    int *ret3 = NULL;
 
+    soft_timer_add(&timer_0, SOFT_TIMER_TYPE_ONCE, 100, "timer_0", timer_0_handle, &a, &ret0);
+    soft_timer_add(&timer_2, SOFT_TIMER_TYPE_PERIOD, 8000, "timer_2", timer_2_handle, &c, &ret2);
+    soft_timer_add(&timer_1, SOFT_TIMER_TYPE_PERIOD, 1000, "timer_1", timer_1_handle, &b, &ret1);
+    soft_timer_add(&timer_3, SOFT_TIMER_TYPE_PERIOD, 2000, "timer_3", timer_3_handle, &d, &ret3);
+    soft_timer_list_print();
+    //int diff_ms = 0;
+    while (1)
+    {
+        // dbg_info("*ret0 =%d\r\n", ret0?*ret0:-1);
+        // dbg_info("*ret1 =%d\r\n", ret1?*ret1:-1);
+        // dbg_info("*ret2 =%d\r\n", ret2?*ret2:-1);
+        sleep(1);
+        //diff_ms+=1000;
+        soft_timer_scan_list(1000);
+    }
 
+    soft_timer_remove(&timer_1);
+    soft_timer_list_print();
+    soft_timer_remove(&timer_2);
+    soft_timer_list_print();
+}
 int main(int agrc, char *argv[])
 {
-    //test_drive();
-    //  test_threadpool();
-    //  test_locks();
-    //  test_semaphores();
-    // test_mempool();
-    //test_package();
-    // test_ipaddr();
-    test_worker();
+    // test_drive();
+    //   test_threadpool();
+    //   test_locks();
+    //   test_semaphores();
+    //  test_mempool();
+    // test_package();
+    //  test_ipaddr();
+    // test_worker();
+    timer_test();
     return 0;
 }

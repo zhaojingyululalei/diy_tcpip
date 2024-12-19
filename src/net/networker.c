@@ -70,7 +70,7 @@ DEFINE_THREAD_FUNC(worker)
         {
             if (netif) // 这个数据包来自网卡，经过处理，再由该网卡发出
             {
-
+                /*？？发包的时候记得用ehter_out发送，即netif.link_ops.out，把以太网头封上*/
                 netif_putpkg(&netif->out_q, pkg);
             }
             else // 该数据包来自应用程序，并非某个网卡

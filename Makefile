@@ -21,10 +21,10 @@ OUTPUT	:= output
 SRC		:= src
 
 # define include directory
-INCLUDE	:= src
+INCLUDE	:= src 
 
 # define lib directory
-LIB		:= lib
+LIB		:= 
 
 ifeq ($(OS),Windows_NT)
 MAIN	:= main.exe

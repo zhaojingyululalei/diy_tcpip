@@ -98,6 +98,8 @@ static inline list_node_t* list_last(list_t *list) {
 
 void list_insert_first(list_t *list, list_node_t *node);
 void list_insert_last(list_t *list, list_node_t *node);
+void list_insert_behind(list_t *list, list_node_t *pos_node, list_node_t *insert_node);
+void list_insert_front(list_t *list, list_node_t *pos_node, list_node_t *insert_node);
 list_node_t* list_remove_first(list_t *list);
 list_node_t* list_remove(list_t *list, list_node_t *node);
 void list_destory(list_t* list);
