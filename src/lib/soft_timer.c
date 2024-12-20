@@ -158,3 +158,17 @@ int soft_timer_scan_list(int diff_ms)
     //soft_timer_list_print();
     return 0;
 }
+
+
+int soft_timer_get_first_time(void)
+{
+    list_node_t* fnode = soft_timer_list.first;
+    if(fnode)
+    {
+        soft_timer_t* timer = list_node_parent(fnode,soft_timer_t,node);
+        return timer->cur;
+    }
+    else{
+        return 0;
+    }
+}

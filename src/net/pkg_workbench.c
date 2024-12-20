@@ -16,10 +16,10 @@ void workbench_init(void)
     mempool_init(&wb_stuff_pool,&wb_stuff_buf,WORKBENCH_STUFF_CAPCITY,sizeof(wb_stuff_t));
 }
 
-wb_stuff_t* workbench_get_stuff(void)
+wb_stuff_t* workbench_get_stuff(int ms)
 {
     
-    wb_stuff_t* stuff = (wb_stuff_t*)msgQ_dequeue(&workbench,0);//阻塞等
+    wb_stuff_t* stuff = (wb_stuff_t*)msgQ_dequeue(&workbench,ms);//阻塞等
    return stuff;
     
 

@@ -2,6 +2,8 @@
 #include "pkg_workbench.h"
 #include "threadpool.h"
 #include "netif.h"
+#include "soft_timer.h"
+#include "timer.h"
 semaphore_t mover_sem;
 // 数据包搬运工,采集网卡数据,放入工作台
 DEFINE_THREAD_FUNC(mover)
@@ -45,8 +47,9 @@ static int handle(netif_t *netif, pkg_t *pkg)
             return ret;
         }
     }
-    else{
-        //数据链路层不存在
+    else
+    {
+        // 数据链路层不存在
         package_collect(pkg);
         return -2;
     }
@@ -56,27 +59,34 @@ static int handle(netif_t *netif, pkg_t *pkg)
 DEFINE_THREAD_FUNC(worker)
 {
     int ret;
+    soft_timer_list_print();
     while (1)
     {
         uint8_t *buf = NULL;
-        wb_stuff_t *stuff = workbench_get_stuff();//阻塞等
-        pkg_t *pkg = stuff->package;
-        netif_t *netif = stuff->netif;
-        workbench_collect_stuff(stuff);
-        dbg_info("worker get stuff pakcage,len = %d\n", pkg->total);
-        ret = handle(netif, pkg);
-        //数据包处理正确，才可以往out_q里面放
-        if (ret >= 0)
+        uint32_t before = get_cur_time_ms();
+        wb_stuff_t *stuff = workbench_get_stuff(soft_timer_get_first_time());
+        if (stuff)
         {
-            if (netif) // 这个数据包来自网卡，经过处理，再由该网卡发出
-            {
-                /*？？发包的时候记得用ehter_out发送，即netif.link_ops.out，把以太网头封上*/
-                netif_putpkg(&netif->out_q, pkg);
-            }
-            else // 该数据包来自应用程序，并非某个网卡
-            {
-            }
+            pkg_t *pkg = stuff->package;
+            netif_t *netif = stuff->netif;
+            workbench_collect_stuff(stuff);
+            dbg_info("worker get stuff pakcage,len = %d\n", pkg->total);
+            ret = handle(netif, pkg);
         }
+        uint32_t after = get_cur_time_ms();
+        soft_timer_scan_list(after-before);
+        // //数据包处理正确，才可以往out_q里面放
+        // if (ret >= 0)
+        // {
+        //     if (netif) // 这个数据包来自网卡，经过处理，再由该网卡发出
+        //     {
+        //         /*？？发包的时候记得用ehter_out发送，即netif.link_ops.out，把以太网头封上*/
+        //         netif_putpkg(&netif->out_q, pkg);
+        //     }
+        //     else // 该数据包来自应用程序，并非某个网卡
+        //     {
+        //     }
+        // }
     }
 }
 

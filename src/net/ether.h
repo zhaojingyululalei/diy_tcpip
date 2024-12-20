@@ -4,6 +4,7 @@
 #include "types.h"
 #include "net_cfg.h"
 #define MTU_MAX_SIZE    1500
+#define MTU_MIN_SIZE    46
 #pragma pack(1)
 typedef struct _ether_header_t
 {

@@ -3,6 +3,15 @@
 // #include "net/netif.h"
 // #include "tools/debug.h"
 // #include <unistd.h>
+// static uint8_t mac_addr_Host[MAC_ADDR_ARR_LEN] = {0x0, 0x0c, 0x29, 0x6e, 0x06, 0x0c};
+// uint8_t *get_mac_addr(const char *name)
+// {
+//     if (strncmp(name, "ens37", 5) == 0)
+//     {
+//         return mac_addr_Host;
+//     }
+//     return NULL;
+// }
 // void test_drive(void)
 // {
 //     /*虚拟机新添加了一个网卡,only-host模式， 在netplan中自己进行了配置，命名为ens37*/
@@ -373,26 +382,7 @@ void test_loop(void)
         sleep(1);
     }
 }
-#include "phnetif.h"
-void test_phnetif(void)
-{
-    netif_t *netif = phnetif_init();
-    netif_open(netif);
-    print_netif_list();
-    netif_activate(netif);
 
-    // netif_out(netif,)
-    while (1)
-    {
-        sleep(1);
-    }
-}
-void test_worker(void)
-{
-    net_system_init();
-    net_system_start();
-    test_phnetif();
-}
 #include "soft_timer.h"
 DEFINE_TIMER_FUNC(timer_0_handle)
 {
@@ -426,35 +416,65 @@ DEFINE_TIMER_FUNC(timer_3_handle)
     dbg_info("in timer handler .. arg:%d  ret:%d\r\n", *x, *ret);
     return ret;
 }
+#include "timer.h"
+soft_timer_t timer_0, timer_1, timer_2, timer_3;
+int a = 0, b = 1, c = 2, d = 3;
+int *ret0 = NULL;
+int *ret1 = NULL;
+int *ret2 = NULL;
+int *ret3 = NULL;
 void timer_test(void)
 {
-    soft_timer_t timer_0, timer_1, timer_2,timer_3;
-    int a = 0, b = 1, c = 2,d=3;
-    int *ret0 = NULL;
-    int *ret1 = NULL;
-    int *ret2 = NULL;
-    int *ret3 = NULL;
+    // uint32_t before = get_cur_time_ms();
+    // sleep(1);
+    // uint32_t after = get_cur_time_ms();
+    // uint32_t ret = after - before;
 
     soft_timer_add(&timer_0, SOFT_TIMER_TYPE_ONCE, 100, "timer_0", timer_0_handle, &a, &ret0);
     soft_timer_add(&timer_2, SOFT_TIMER_TYPE_PERIOD, 8000, "timer_2", timer_2_handle, &c, &ret2);
     soft_timer_add(&timer_1, SOFT_TIMER_TYPE_PERIOD, 1000, "timer_1", timer_1_handle, &b, &ret1);
     soft_timer_add(&timer_3, SOFT_TIMER_TYPE_PERIOD, 2000, "timer_3", timer_3_handle, &d, &ret3);
     soft_timer_list_print();
-    //int diff_ms = 0;
+    // //int diff_ms = 0;
+    // while (1)
+    // {
+    //     // dbg_info("*ret0 =%d\r\n", ret0?*ret0:-1);
+    //     // dbg_info("*ret1 =%d\r\n", ret1?*ret1:-1);
+    //     // dbg_info("*ret2 =%d\r\n", ret2?*ret2:-1);
+    //     sleep(1);
+    //     //diff_ms+=1000;
+    //     soft_timer_scan_list(1000);
+    // }
+
+    // soft_timer_remove(&timer_1);
+    // soft_timer_list_print();
+    // soft_timer_remove(&timer_2);
+    // soft_timer_list_print();
+}
+#include "phnetif.h"
+void test_phnetif(void)
+{
+    netif_t *netif = phnetif_init();
+    netif_open(netif);
+    print_netif_list();
+    netif_activate(netif);
+    ipaddr_t ip;
+    ipaddr_s2n("192.168.169.20",&ip);
+    uint8_t pkg_data[2]={0x55,0xaa};
+    pkg_t* pkg = package_create(pkg_data,2);
+    netif_out(netif,&ip,pkg);
+    // netif_out(netif,)
     while (1)
     {
-        // dbg_info("*ret0 =%d\r\n", ret0?*ret0:-1);
-        // dbg_info("*ret1 =%d\r\n", ret1?*ret1:-1);
-        // dbg_info("*ret2 =%d\r\n", ret2?*ret2:-1);
         sleep(1);
-        //diff_ms+=1000;
-        soft_timer_scan_list(1000);
     }
-
-    soft_timer_remove(&timer_1);
-    soft_timer_list_print();
-    soft_timer_remove(&timer_2);
-    soft_timer_list_print();
+}
+void test_worker(void)
+{
+    net_system_init();
+    //timer_test();
+    net_system_start();
+    test_phnetif();
 }
 int main(int agrc, char *argv[])
 {
@@ -465,7 +485,7 @@ int main(int agrc, char *argv[])
     //  test_mempool();
     // test_package();
     //  test_ipaddr();
-    // test_worker();
-    timer_test();
+    // timer_test();
+    test_worker();
     return 0;
 }

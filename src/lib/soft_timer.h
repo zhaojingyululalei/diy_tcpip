@@ -34,5 +34,6 @@ void soft_timer_init(void);
 int soft_timer_add(soft_timer_t* timer,soft_timer_type_t type,int ms,const char* name,soft_timer_handler handle_func,void* arg,void** ret);
 int soft_timer_remove(soft_timer_t* timer);
 int soft_timer_scan_list(int diff_ms);
+int soft_timer_get_first_time(void);
 #endif
 

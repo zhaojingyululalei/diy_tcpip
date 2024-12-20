@@ -6,7 +6,7 @@
 typedef struct _netif_card_info_t
 {
     int id;
-    int used;
+    int used; //这块网卡是否被使用，还是空闲
     int avail;
     char ipv4[16];
     uint8_t mac[MAC_ADDR_ARR_LEN];
@@ -24,6 +24,9 @@ void pcap_drive_init(void);
 netif_card_info_t* get_one_net_card(void);
 netif_card_info_t* get_one_specified_card(int idx);
 void put_one_net_card(int card_idx);
+
+
+
 /*虚拟机新添加了一个网卡,only-host模式， 在netplan中自己进行了配置，命名为ens37*/
 int pcap_find_device(const char *ip, char *name_buf);
 int pcap_show_list(void) ;

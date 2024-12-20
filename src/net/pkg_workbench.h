@@ -10,7 +10,7 @@ typedef struct _wb_stuff_t
 }wb_stuff_t;
 
 void workbench_init(void);
-wb_stuff_t* workbench_get_stuff(void);
+wb_stuff_t* workbench_get_stuff(int ms);
 void workbench_put_stuff(pkg_t* package,netif_t* netif);
 int workbench_collect_stuff(wb_stuff_t* stuff);
 #endif

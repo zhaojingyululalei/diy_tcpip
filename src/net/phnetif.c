@@ -34,7 +34,7 @@ netif_t *phnetif_init(void)
 
     return ret;
 }
-
+/*物理网卡驱动*/
 int phnetif_open(netif_t *netif, void *ex_data)
 {
     if (!netif)
@@ -61,13 +61,14 @@ int phnetif_open(netif_t *netif, void *ex_data)
 
     return 0;
 }
+/*物理网卡驱动*/
 int phnetif_close(netif_t *netif)
 {
     phnetif_drive_data_t *exdata = (phnetif_drive_data_t *)netif->ex_data;
     pcap_close(exdata->handler);
     return 0;
 }
-
+/*物理网卡驱动*/
 int phnetif_send(netif_t *netif, const uint8_t *buf, int len)
 {
     int ret;
@@ -85,7 +86,7 @@ int phnetif_send(netif_t *netif, const uint8_t *buf, int len)
     ret = pcap_send_pkg(exdata->handler, buf, len);
     return ret;
 }
-
+/*物理网卡驱动*/
 int phnetif_receive(netif_t *netif, const uint8_t **buf, int len)
 {
     int ret;

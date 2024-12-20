@@ -121,7 +121,7 @@ int wait(semaphore_t* sem)
     return ret==0?0:-1;
 }
 
-#define CLOCK_REALTIME	0
+
 /*毫秒*/
 int time_wait(semaphore_t *sem, int timeout) {
     if (timeout < 0) {

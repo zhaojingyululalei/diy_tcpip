@@ -91,7 +91,7 @@ typedef struct _netif_t
 
 } netif_t;
 
-uint8_t *get_mac_addr(const char *name);
+//uint8_t *get_mac_addr(const char *name);
 
 void netif_init(void);
 void netif_destory(void);
@@ -111,8 +111,7 @@ int netif_open(netif_t *netif);
 int netif_activate(netif_t *netif);
 int netif_shutdown(netif_t *netif);
 int netif_close(netif_t *netif);
-#include "protocal.h"
-int netif_out(netif_t* netif,pkg_t* pkg,uint8_t* desc,uint8_t*src,protocal_type_t type);
+int netif_out(netif_t* netif,ipaddr_t* ip,pkg_t* pkg);
 
 pkg_t *netif_getpkg(msgQ_t *queue);
 int netif_putpkg(msgQ_t *queue, pkg_t *pkg);
@@ -132,6 +131,9 @@ netif_t *netif_remove(netif_t *netif);
 netif_t *netif_first();
 netif_t *netif_next(netif_t *netif);
 void print_netif_list(void);
+netif_t* is_mac_host(uint8_t* mac);
+netif_t* is_ip_host(ipaddr_t* ip);
+
 /******************** */
 
 /*配置函数*/

@@ -44,6 +44,8 @@
         "memory": "c",
         "new": "c",
         "functional": "c",
-        "soft_timer.h": "c"
+        "soft_timer.h": "c",
+        "timer.h": "c",
+        "arp.h": "c"
     },
 }

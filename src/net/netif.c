@@ -2,15 +2,7 @@
 #include "mmpool.h"
 #include "debug.h"
 #include "net_drive.h"
-static uint8_t mac_addr_Host[MAC_ADDR_ARR_LEN] = {0x0, 0x0c, 0x29, 0x6e, 0x06, 0x0c};
-uint8_t *get_mac_addr(const char *name)
-{
-    if (strncmp(name, "ens37", 5) == 0)
-    {
-        return mac_addr_Host;
-    }
-    return NULL;
-}
+
 int netif_set_ipaddr(netif_t *netif, const ipaddr_t *ipaddr)
 {
     if (!netif || !ipaddr)
@@ -141,6 +133,38 @@ void print_netif_list(void)
         // 获取下一个节点
         current_node = list_node_next(current_node);
     }
+}
+netif_t* is_mac_host(uint8_t* mac)
+{
+    list_t* list = &netif_list;
+    list_node_t* cur_node = list->first;
+    while(cur_node)
+    {
+        netif_t* cur_netif = list_node_parent(cur_node,netif_t,node);
+        if(memcmp(mac,cur_netif->macaddr,MAC_ADDR_ARR_LEN)==0)
+        {
+            return cur_netif;
+        }
+        cur_node = cur_node->next;
+    }
+    return NULL;
+}
+
+
+netif_t* is_ip_host(ipaddr_t* ip)
+{
+    list_t* list = &netif_list;
+    list_node_t* cur_node = list->first;
+    while(cur_node)
+    {
+        netif_t* cur_netif = list_node_parent(cur_node,netif_t,node);
+        if(cur_netif->info.ipaddr.q_addr==ip->q_addr)
+        {
+            return cur_netif;
+        }
+        cur_node = cur_node->next;
+    }
+    return NULL;
 }
 void netif_init(void)
 {
@@ -420,11 +444,39 @@ int netif_close(netif_t *netif)
     return 0;
 }
 
+int netif_out(netif_t *netif, ipaddr_t *ip, pkg_t *pkg)
+{
+    int ret;
+    if(netif->link_ops)
+    {
+        ret = netif->link_ops->out(netif,ip,pkg);
+        if(ret<0)
+        {
+            dbg_warning("netif link out a pkg fail\r\n");
+            package_collect(pkg);
+            return ret;
+        }
+    }
+    else
+    {
+        ret = netif_putpkg(&netif->out_q, pkg);
+        if(ret < 0)
+        {
+            dbg_warning("netif out a pkg fail\r\n");
+            package_collect(pkg);
+            return ret;
+        }
+
+    }
+    return 0;
+}
+
+/*取包时阻塞等*/
 pkg_t *netif_getpkg(msgQ_t *queue)
 {
     return msgQ_dequeue(queue, 0);
 }
-
+/*放包时不用等，大不了丢包*/
 int netif_putpkg(msgQ_t *queue, pkg_t *pkg)
 {
     return msgQ_enqueue(queue, pkg, -1);
@@ -449,6 +501,7 @@ int netif_send_simulate(netif_t *netif)
     package_lseek(pkg, 0);
     package_read(pkg, buf, pkg->total);
     ret = netif->ops->send(netif, buf, pkg->total); // 发送驱动
+    //发送成功回收资源
     package_collect(pkg);
     free(buf);
     return ret;

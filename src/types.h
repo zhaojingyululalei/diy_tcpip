@@ -7,4 +7,4 @@
 #include <unistd.h>
 #include <time.h>
 #include <errno.h>
-
+#define CLOCK_REALTIME	0

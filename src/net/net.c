@@ -4,6 +4,7 @@
 #include "threadpool.h"
 #include "loop.h"
 #include "networker.h"
+#include "arp.h"
 threadpool_t netthread_pool;
 
 /**
@@ -12,6 +13,7 @@ threadpool_t netthread_pool;
 void net_system_init(void)
 {
     soft_timer_init();
+    
     //物理网卡检测
     pcap_drive_init();
     package_pool_init();
@@ -26,6 +28,7 @@ void net_system_init(void)
 
     //数据链路层初始化
     ether_init();
+    arp_init();
     return;
     
 }
