@@ -20,6 +20,9 @@ typedef struct _ether_pkg_t
 }ether_pkg_t;
 
 #pragma pack()
-
+#include "protocal.h"
+#include "package.h"
+#include "netif.h"
 void ether_init(void);
+int ether_raw_out(netif_t* netif,protocal_type_t type,const uint8_t* mac_dest,pkg_t* pkg);
 #endif

@@ -51,5 +51,7 @@ typedef struct _arp_pkg_t
 
 
 void arp_init(void);
-
+int arp_send_request(netif_t* netif, const ipaddr_t* dest_ip);
+int arp_send_no_reply(netif_t* netif);
+int arp_send_reply(netif_t* netif,pkg_t* pkg);
 #endif

@@ -2,6 +2,7 @@
 #ifndef __NET_CFG_H
 #define __NET_CFG_H
 #define IPV4_ADDR_SIZE 32
+#define IPV4_ADDR_ARR_LEN   (IPV4_ADDR_SIZE/8)
 #define MAC_ADDR_ARR_LEN    6
 #define MAC_ARRAY_LEN 6
 
@@ -28,9 +29,12 @@
 #define NETIF_PH_MASK       "255.255.255.0"
 #define NETIF_PH_GATEWAY    "192.168.128.2"
 
+#define BROADCAST_MAC_ADDR  "ff:ff:ff:ff:ff:ff"
+#define EMPTY_MAC_ADDR      "00:00:00:00:00:00"
+
 //#define DBG_THREAD_PRINT
 #define DBG_EHTER_PRINT
 #define DBG_SOFT_TIMER_PRINT
-
+#define DBG_ARP_PRITN
 
 #endif

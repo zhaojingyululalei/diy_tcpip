@@ -16,7 +16,7 @@ DEFINE_THREAD_FUNC(mover)
         while (cur)
         {
             // 从inq获取一个数据包放入工作台
-            pkg_t *pkg = netif_getpkg(&cur->in_q); // 非阻塞
+            pkg_t *pkg = netif_getpkg(&cur->in_q,-1); // 非阻塞
             if (pkg)
             {
 

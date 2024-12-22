@@ -31,6 +31,14 @@ void soft_timer_dbg_print(soft_timer_t* timer,int id);
 void soft_timer_list_print(void);
 void soft_timer_init(void);
 
+static inline soft_timer_t* soft_timer_alloc(void)
+{
+    return (soft_timer_t*)malloc(sizeof(soft_timer_t));
+}
+static inline void soft_timer_free(soft_timer_t* timer)
+{
+    free(timer);
+}
 int soft_timer_add(soft_timer_t* timer,soft_timer_type_t type,int ms,const char* name,soft_timer_handler handle_func,void* arg,void** ret);
 int soft_timer_remove(soft_timer_t* timer);
 int soft_timer_scan_list(int diff_ms);

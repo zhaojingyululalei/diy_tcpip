@@ -23,6 +23,10 @@ int ipaddr_n2s(const ipaddr_t *ip_addr, char *ip_str, size_t str_len);
 /*主机小端对齐，网络大端对齐(低字节在高地址)*/
 void h2n(const void* host,int len,void* net);
 void n2h(const void* net,int len,void* host);
+void _htons(uint16_t host,void* net);
+void _htonl(uint32_t host,void* net);
+void _ntohs(uint16_t net,void* host);
+void _ntohl(uint32_t net,void* host);
 
 int mac_n2s(const uint8_t* mac, char* mac_str);
 int mac_s2n(uint8_t* mac, const char* mac_str);

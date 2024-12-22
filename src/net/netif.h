@@ -113,8 +113,8 @@ int netif_shutdown(netif_t *netif);
 int netif_close(netif_t *netif);
 int netif_out(netif_t* netif,ipaddr_t* ip,pkg_t* pkg);
 
-pkg_t *netif_getpkg(msgQ_t *queue);
-int netif_putpkg(msgQ_t *queue, pkg_t *pkg);
+pkg_t *netif_getpkg(msgQ_t *queue,int ms);
+int netif_putpkg(msgQ_t *queue, pkg_t *pkg,int ms);
 
 // 这里暂时用线程做，移植后，用中断代替
 int netif_send_simulate(netif_t *netif);

@@ -75,6 +75,19 @@ void h2n(const void* host,int len,void* net)
     
 }
 
+void _htons(uint16_t host,void* net)
+{
+    uint16_t x = host;
+    h2n(&x,sizeof(uint16_t),net);
+
+}
+void _htonl(uint32_t host,void* net)
+{
+    uint32_t x = host;
+    h2n(&x,sizeof(uint32_t),net);
+}
+
+
 void n2h(const void* net,int len,void* host)
 {
     uint8_t* arrx = (uint8_t*)net;
@@ -86,7 +99,16 @@ void n2h(const void* net,int len,void* host)
     return ;
     
 }
-
+void _ntohs(uint16_t net,void* host)
+{
+    uint16_t x = net;
+    n2h(&x,sizeof(uint16_t),host);
+}
+void _ntohl(uint32_t net,void* host)
+{
+    uint32_t x = net;
+    n2h(&x,sizeof(uint32_t),host);
+}
 
 
 int mac_n2s(const uint8_t* mac, char* mac_str)

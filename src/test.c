@@ -452,17 +452,20 @@ void timer_test(void)
     // soft_timer_list_print();
 }
 #include "phnetif.h"
+#include "arp.h"
 void test_phnetif(void)
 {
     netif_t *netif = phnetif_init();
     netif_open(netif);
     print_netif_list();
     netif_activate(netif);
-    ipaddr_t ip;
-    ipaddr_s2n("192.168.169.20",&ip);
-    uint8_t pkg_data[2]={0x55,0xaa};
-    pkg_t* pkg = package_create(pkg_data,2);
-    netif_out(netif,&ip,pkg);
+    ipaddr_t ip = {
+        .type = IPADDR_V4
+    };
+    char* ip_buf="192.168.169.20";
+    ipaddr_s2n(ip_buf,&ip);
+
+    arp_send_request(netif,&ip);
     // netif_out(netif,)
     while (1)
     {

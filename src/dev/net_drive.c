@@ -96,6 +96,7 @@ void put_one_net_card(int card_idx)
 {
     net_drive_info.pcap_netif_drive_arr[card_idx].used = 0;
 }
+/*输出所有物理网卡信息，并且保存到一个结构体里*/
 void pcap_drive_init(void)
 {
 

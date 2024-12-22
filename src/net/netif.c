@@ -69,11 +69,11 @@ static mempool_t netif_pool;
 static netif_t netifs[NETIF_MAX_NR * (sizeof(netif_t) + sizeof(list_node_t))];
 static list_t netif_list;
 static lock_t netif_list_locker;
-static link_layer_t* link_layers[NETIF_TYPE_SIZE];
-int netif_register_link_layer(link_layer_t* layer)
+static link_layer_t *link_layers[NETIF_TYPE_SIZE];
+int netif_register_link_layer(link_layer_t *layer)
 {
     netif_type_t type = layer->type;
-    if(type>=NETIF_TYPE_SIZE || type<=0)
+    if (type >= NETIF_TYPE_SIZE || type <= 0)
     {
         dbg_error("register link layer fail\r\n");
         return -1;
@@ -85,12 +85,12 @@ void print_netif_list(void)
 {
     list_node_t *current_node = list_first(&netif_list); // 获取链表的第一个节点
 
-   dbg_info("Netif List:\n");
-   dbg_info("---------------------------------------------------------------------------------\n");
-   dbg_info("| ID   | Name          | Type       | IP           | MAC Address         |\n");
-   dbg_info("|      |               |            | Gateway      |                    |\n");
-   dbg_info("|      |               |            | Mask         |                    |\n");
-   dbg_info("---------------------------------------------------------------------------------\n");
+    dbg_info("Netif List:\n");
+    dbg_info("---------------------------------------------------------------------------------\n");
+    dbg_info("| ID   | Name          | Type       | IP           | MAC Address         |\n");
+    dbg_info("|      |               |            | Gateway      |                    |\n");
+    dbg_info("|      |               |            | Mask         |                    |\n");
+    dbg_info("---------------------------------------------------------------------------------\n");
 
     while (current_node)
     {
@@ -125,23 +125,23 @@ void print_netif_list(void)
                  netif->macaddr[3], netif->macaddr[4], netif->macaddr[5]);
 
         // 打印信息
-       dbg_info("| %-4d | %-13s | %-10s | %-11s | %-17s |\n", netif->id, netif->info.name, type_str, ip_str, mac_str);
-       dbg_info("|      |               |            | %-11s |                    |\n", gateway_str);
-       dbg_info("|      |               |            | %-11s |                    |\n", mask_str);
-       dbg_info("---------------------------------------------------------------------------------\n");
+        dbg_info("| %-4d | %-13s | %-10s | %-11s | %-17s |\n", netif->id, netif->info.name, type_str, ip_str, mac_str);
+        dbg_info("|      |               |            | %-11s |                    |\n", gateway_str);
+        dbg_info("|      |               |            | %-11s |                    |\n", mask_str);
+        dbg_info("---------------------------------------------------------------------------------\n");
 
         // 获取下一个节点
         current_node = list_node_next(current_node);
     }
 }
-netif_t* is_mac_host(uint8_t* mac)
+netif_t *is_mac_host(uint8_t *mac)
 {
-    list_t* list = &netif_list;
-    list_node_t* cur_node = list->first;
-    while(cur_node)
+    list_t *list = &netif_list;
+    list_node_t *cur_node = list->first;
+    while (cur_node)
     {
-        netif_t* cur_netif = list_node_parent(cur_node,netif_t,node);
-        if(memcmp(mac,cur_netif->macaddr,MAC_ADDR_ARR_LEN)==0)
+        netif_t *cur_netif = list_node_parent(cur_node, netif_t, node);
+        if (memcmp(mac, cur_netif->macaddr, MAC_ADDR_ARR_LEN) == 0)
         {
             return cur_netif;
         }
@@ -150,15 +150,14 @@ netif_t* is_mac_host(uint8_t* mac)
     return NULL;
 }
 
-
-netif_t* is_ip_host(ipaddr_t* ip)
+netif_t *is_ip_host(ipaddr_t *ip)
 {
-    list_t* list = &netif_list;
-    list_node_t* cur_node = list->first;
-    while(cur_node)
+    list_t *list = &netif_list;
+    list_node_t *cur_node = list->first;
+    while (cur_node)
     {
-        netif_t* cur_netif = list_node_parent(cur_node,netif_t,node);
-        if(cur_netif->info.ipaddr.q_addr==ip->q_addr)
+        netif_t *cur_netif = list_node_parent(cur_node, netif_t, node);
+        if (cur_netif->info.ipaddr.q_addr == ip->q_addr)
         {
             return cur_netif;
         }
@@ -180,6 +179,7 @@ void netif_destory(void)
     list_destory(&netif_list);
 }
 #include "phnetif.h"
+/*注册物理网卡*/
 netif_t *netif_register(const netif_info_t *info, const netif_ops_t *ops, void *ex_data)
 {
     netif_t *netif = (netif_t *)mempool_alloc_blk(&netif_pool, -1);
@@ -201,10 +201,9 @@ netif_t *netif_register(const netif_info_t *info, const netif_ops_t *ops, void *
         netif->macaddr[i] = card->mac[i];
     }
 
-    
     return netif;
 }
-netif_t *netif_virtual_register(const netif_info_t *info, const netif_ops_t *ops,  void *ex_data)
+netif_t *netif_virtual_register(const netif_info_t *info, const netif_ops_t *ops, void *ex_data)
 {
     netif_t *netif = (netif_t *)mempool_alloc_blk(&netif_pool, -1);
     memset(netif, 0, sizeof(netif));
@@ -220,7 +219,7 @@ netif_t *netif_virtual_register(const netif_info_t *info, const netif_ops_t *ops
     free(info);
     netif->id = PCAP_NETIF_DRIVE_ARR_MAX + list_count(&netif_list);
     netif->mtu = 1500;
-    
+
     return netif;
 }
 int netif_free(netif_t *netif)
@@ -306,7 +305,7 @@ int netif_open(netif_t *netif)
     msgQ_init(&netif->in_q, netif->in_q_buf, NETIF_INQ_BUF_MAX);
     msgQ_init(&netif->out_q, netif->out_q_buf, NETIF_OUTQ_BUF_MAX);
     lock_init(&netif->locker);
-    // 将loop网卡加入链表
+    // 将网卡加入链表
     ret = netif_add(netif);
     if (ret < 0)
     {
@@ -317,9 +316,9 @@ int netif_open(netif_t *netif)
     }
 
     ret = netif->ops->open(netif, netif->ex_data); // 调用驱动
-    //注册数据链路层操作
+    // 注册数据链路层操作
     netif->link_ops = link_layers[netif->info.type];
-    if(ret <0 )
+    if (ret < 0)
     {
         return ret;
     }
@@ -339,6 +338,14 @@ int netif_activate(netif_t *netif)
         return -2;
     }
     netif->state = NETIF_ACTIVe;
+
+    //
+    if (!netif->link_ops)
+    {
+        dbg_error("link_ops nerver register\r\n");
+        return -1;
+    }
+    // 激活收发线程开始工作
     lock(&netif->locker);
     netif->send_flag = 1;
     netif->recv_flag = 1;
@@ -349,6 +356,11 @@ int netif_activate(netif_t *netif)
     netif->tsend = send;
     netif->trecv = recv;
     unlock(&netif->locker);
+
+    // 链路层打开
+
+    netif->link_ops->open(netif);
+
     return 0;
 }
 
@@ -400,7 +412,7 @@ int netif_shutdown(netif_t *netif)
             unlock(&netif->locker);
         }
     }
-    
+
     while (!msgQ_is_empty(&netif->in_q))
     {
         pkg_t *pkg = (pkg_t *)msgQ_dequeue(&netif->in_q, -1);
@@ -419,6 +431,12 @@ int netif_shutdown(netif_t *netif)
         {
             dbg_warning("collect pkg fail\r\n");
         }
+    }
+
+    //
+    if (netif->link_ops)
+    {
+        netif->link_ops->close(netif);
     }
     return 0;
 }
@@ -447,10 +465,10 @@ int netif_close(netif_t *netif)
 int netif_out(netif_t *netif, ipaddr_t *ip, pkg_t *pkg)
 {
     int ret;
-    if(netif->link_ops)
+    if (netif->link_ops)
     {
-        ret = netif->link_ops->out(netif,ip,pkg);
-        if(ret<0)
+        ret = netif->link_ops->out(netif, ip, pkg);
+        if (ret < 0)
         {
             dbg_warning("netif link out a pkg fail\r\n");
             package_collect(pkg);
@@ -459,27 +477,26 @@ int netif_out(netif_t *netif, ipaddr_t *ip, pkg_t *pkg)
     }
     else
     {
-        ret = netif_putpkg(&netif->out_q, pkg);
-        if(ret < 0)
+        ret = netif_putpkg(&netif->out_q, pkg, -1);
+        if (ret < 0)
         {
             dbg_warning("netif out a pkg fail\r\n");
             package_collect(pkg);
             return ret;
         }
-
     }
     return 0;
 }
 
 /*取包时阻塞等*/
-pkg_t *netif_getpkg(msgQ_t *queue)
+pkg_t *netif_getpkg(msgQ_t *queue, int ms)
 {
-    return msgQ_dequeue(queue, 0);
+    return msgQ_dequeue(queue, ms);
 }
 /*放包时不用等，大不了丢包*/
-int netif_putpkg(msgQ_t *queue, pkg_t *pkg)
+int netif_putpkg(msgQ_t *queue, pkg_t *pkg, int ms)
 {
-    return msgQ_enqueue(queue, pkg, -1);
+    return msgQ_enqueue(queue, pkg, ms);
 }
 /**
  * 从outq里取出一个数据包，然后通过网卡发出去
@@ -491,7 +508,7 @@ int netif_send_simulate(netif_t *netif)
     {
         return -1;
     }
-    pkg_t *pkg = netif_getpkg(&netif->out_q);//阻塞等，队列里没东西就等
+    pkg_t *pkg = netif_getpkg(&netif->out_q, 0); // 阻塞等，队列里没东西就等
     if (!pkg)
     {
         return 0;
@@ -501,7 +518,7 @@ int netif_send_simulate(netif_t *netif)
     package_lseek(pkg, 0);
     package_read(pkg, buf, pkg->total);
     ret = netif->ops->send(netif, buf, pkg->total); // 发送驱动
-    //发送成功回收资源
+    // 发送成功回收资源
     package_collect(pkg);
     free(buf);
     return ret;
@@ -530,8 +547,8 @@ int netif_receive_simulate(netif_t *netif)
         dbg_error("create a pkg fail\r\n");
         return -1;
     }
-    
-    ret = netif_putpkg(&netif->in_q, pkg);
+
+    ret = netif_putpkg(&netif->in_q, pkg, -1);
     if (ret == 0)
     {
         post(&mover_sem); // 确实放进去一个pkg，唤醒mover线程搬运

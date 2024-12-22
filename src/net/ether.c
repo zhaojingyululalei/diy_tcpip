@@ -1,8 +1,19 @@
 #include "ether.h"
 #include "netif.h"
 #include "protocal.h"
+#include "networker.h"
+#include "arp.h"
 static int(ether_open)(struct _netif_t *netif)
 {
+    int ret ;
+    //发送一个无回报arp包，
+    //1.告诉别人自己的mac，便于让别人更新arp缓存
+    //2.探测ip地址是否冲突
+    ret = arp_send_no_reply(netif);
+    if(ret <0)
+    {
+        return ret;
+    }
     return 0;
 }
 static void(ether_close)(struct _netif_t *netif)
@@ -54,6 +65,7 @@ static void ether_dbg_print_pkg(pkg_t *pkg)
 }
 static int(ether_in)(struct _netif_t *netif, pkg_t *package)
 {
+    int ret;
 
     ether_header_t *header = package_data(package, sizeof(ether_header_t), 0);
     if (ether_pkg_is_ok(header, package->total) < 0)
@@ -63,11 +75,35 @@ static int(ether_in)(struct _netif_t *netif, pkg_t *package)
     }
 
     ether_dbg_print_pkg(package);
+    uint16_t protocal = 0;
+    _ntohs(header->protocal,&protocal);
+    switch (protocal)
+    {
+    case PROTOCAL_TYPE_ARP:
+        //去掉以太网头
+        ret = package_shrank_front(package,sizeof(ether_header_t));
+        if(ret < 0)
+        {
+            dbg_error("package_shrank_fail\r\n");
+            return ret;
+        }
+        ret = arp_in(netif,package);
+        if(ret < 0)
+        {
+            dbg_warning("arp pkg handle \r\n");
+            return ret;
+        }
+        break;
+    
+    default:
+        dbg_warning("unkown protocal pkg\r\n");
+        return -1;
+    }
     return 0;
 }
 
 
-static int ether_raw_out(netif_t* netif,protocal_type_t type,const uint8_t* mac_dest,pkg_t* pkg)
+int ether_raw_out(netif_t* netif,protocal_type_t type,const uint8_t* mac_dest,pkg_t* pkg)
 {
     int ret;
     int size = pkg->total;
@@ -98,12 +134,16 @@ static int ether_raw_out(netif_t* netif,protocal_type_t type,const uint8_t* mac_
         //如果是主机上的网卡，并且还是激活状态
         if(target->state==NETIF_ACTIVe)
         {
-            netif_putpkg(&target->in_q,pkg);//直接把包放入对应的输入队列
+            ret = netif_putpkg(&target->in_q,pkg,-1);//直接把包放入对应的输入队列
+            if(ret==0)
+            {
+                post(&mover_sem); //放入成功，唤醒搬运线程搬运
+            }
         }
     }
     else{
         //直接放到本网卡输出队列，等待发送
-        netif_putpkg(&netif->out_q,pkg);
+        netif_putpkg(&netif->out_q,pkg,-1);
     }
 
 

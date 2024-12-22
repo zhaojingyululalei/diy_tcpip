@@ -224,7 +224,7 @@ int package_expand_front_align(pkg_t *package, int ex_size)
 {
     //lock(&pkg_locker);
     package->total += ex_size;
-    list_t *fnode = list_first(&package->pkgdb_list);
+    list_node_t *fnode = list_first(&package->pkgdb_list);
     pkg_dblk_t *fdata = list_node_parent(fnode, pkg_dblk_t, node);
     int front_leave = fdata->offset;
     //前面空间够
@@ -381,7 +381,7 @@ pkg_dblk_t *package_get_last_datablk(pkg_t *package)
 
 int package_shrank_front(pkg_t *package, int sh_size)
 {
-    int ret;
+    int ret = 0;
     //lock(&pkg_locker);
     if (sh_size > package->total)
     {
@@ -389,7 +389,7 @@ int package_shrank_front(pkg_t *package, int sh_size)
         dbg_error("sh_size > pkg size");
         return -1;
     }
-    package->total -= sh_size;
+    
 
     pkg_dblk_t *fblk = package_get_first_datablk(package);
     if (fblk->size > sh_size)
@@ -414,12 +414,18 @@ int package_shrank_front(pkg_t *package, int sh_size)
         fblk->offset += leave_sh_size;
     }
     //un//lock(&pkg_locker);
-    return 0;
+    package->total -= sh_size;
+    ret = package_lseek(package,0);
+    if(ret<0)
+    {
+        dbg_error("pkg lseek fail\r\n");
+    }
+    return ret;
 }
 
 int package_shrank_last(pkg_t *package, int sh_size)
 {
-    int ret;
+    int ret = 0;
     //lock(&pkg_locker);
     if (sh_size > package->total)
     {
@@ -427,7 +433,6 @@ int package_shrank_last(pkg_t *package, int sh_size)
         dbg_error("sh_size > pkg size");
         return -1;
     }
-    package->total -= sh_size;
 
     pkg_dblk_t *lblk = package_get_last_datablk(package);
     if (lblk->size > sh_size)
@@ -450,7 +455,13 @@ int package_shrank_last(pkg_t *package, int sh_size)
         lblk->size -= leave_sh_size;
     }
     //un//lock(&pkg_locker);
-    return 0;
+    package->total -= sh_size;
+    ret = package_lseek(package,package->pos);
+    if(ret<0)
+    {
+        dbg_error("pkg lseek fail\r\n");
+    }
+    return ret;
 }
 
 /**

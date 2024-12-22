@@ -46,6 +46,7 @@
         "functional": "c",
         "soft_timer.h": "c",
         "timer.h": "c",
-        "arp.h": "c"
+        "arp.h": "c",
+        "ether.h": "c"
     },
 }
