@@ -460,13 +460,22 @@ void test_phnetif(void)
     print_netif_list();
     netif_activate(netif);
     ipaddr_t ip = {
-        .type = IPADDR_V4
-    };
-    char* ip_buf="192.168.169.20";
-    ipaddr_s2n(ip_buf,&ip);
+        .type = IPADDR_V4};
+    char *ip_buf = "192.168.169.20";
+    ipaddr_s2n(ip_buf, &ip);
+    ipaddr_t mask = {
+        .type = IPADDR_V4};
+    char *mask_buf = "255.255.255.0";
+    ipaddr_s2n(mask_buf, &mask);
 
-    arp_send_request(netif,&ip);
-    // netif_out(netif,)
+    for (int i = 0; i < 2; ++i)
+    {
+        uint8_t data_buf[2] = {0x55, 0xAA};
+        pkg_t *pkg = package_create(data_buf, 2);
+        // arp_send_request(netif,&ip);
+        netif_out(netif, &ip, &mask, pkg);
+    }
+
     while (1)
     {
         sleep(1);
@@ -475,7 +484,7 @@ void test_phnetif(void)
 void test_worker(void)
 {
     net_system_init();
-    //timer_test();
+    // timer_test();
     net_system_start();
     test_phnetif();
 }

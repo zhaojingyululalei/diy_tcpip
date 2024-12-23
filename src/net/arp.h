@@ -5,7 +5,7 @@
 #include "list.h"
 #include "netif.h"
 #include "mmpool.h"
-#define ARP_ENTRY_MAX_SIZE  64
+#include "net_cfg.h"
 typedef struct _arp_entry_t
 {
     ipaddr_t ip;
@@ -18,6 +18,8 @@ typedef struct _arp_entry_t
         ARP_ENTRY_STATE_RESOLVED,//找到了
 
     }state;
+    int tmo;   //表项缓存周期
+    int retry; //重传次数，超过就把这个表项删掉
 
     list_node_t node;
 }arp_entry_t;
@@ -48,10 +50,20 @@ typedef struct _arp_pkg_t
 }arp_pkg_t;
 #pragma pack(0)
 
+extern arp_cache_table_t arp_cache_table;
+void arp_show_cache_list(void);
+arp_entry_t* arp_cache_alloc_entry(arp_cache_table_t *table,int force);
+void arp_cache_free_entry(arp_cache_table_t *table,arp_entry_t* entry);
+arp_entry_t* arp_cache_remove_entry(arp_cache_table_t *table,arp_entry_t* entry);
+int arp_cache_insert_entry(arp_cache_table_t *table,arp_entry_t* entry);
+arp_entry_t* arp_cache_find(arp_cache_table_t* table,ipaddr_t* ip);
 
+int arp_entry_insert_pkg(arp_entry_t* entry,pkg_t* pkg);
+pkg_t* arp_entry_remove_pkg(arp_entry_t* entry,pkg_t* pkg);
 
 void arp_init(void);
 int arp_send_request(netif_t* netif, const ipaddr_t* dest_ip);
 int arp_send_no_reply(netif_t* netif);
 int arp_send_reply(netif_t* netif,pkg_t* pkg);
+
 #endif

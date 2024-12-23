@@ -1,4 +1,6 @@
 #include "ipaddr.h"
+static uint8_t mac_broadcast[MAC_ADDR_ARR_LEN] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+static uint8_t mac_empty[MAC_ADDR_ARR_LEN] = {0};
 int ipaddr_s2n(const char *ip_str, ipaddr_t *ip_addr)
 {
     if (!ip_str || !ip_addr) {
@@ -157,3 +159,105 @@ int mac_s2n(uint8_t* mac, const char* mac_str)
     return 0;
 }
 
+uint32_t ipaddr_get_host(ipaddr_t *ip,ipaddr_t *mask)
+{
+    if (!ip || !mask) {
+        dbg_error("pram null\r\n");
+        return 0; 
+    }
+    uint32_t host;
+    uint32_t ip_ = ip->q_addr;
+    uint32_t mask_ = mask->q_addr;
+
+    host = (~mask_)&ip_;
+    return host;
+}
+uint32_t ipaddr_get_net(ipaddr_t * ip,ipaddr_t *mask)
+{
+    if (!ip || !mask) {
+        dbg_error("pram null\r\n");
+        return 0; 
+    }
+    uint32_t net;
+    uint32_t ip_ = ip->q_addr;
+    uint32_t mask_ = mask->q_addr;
+
+    net = ip_ & mask_;
+    return net;
+}
+
+int is_local_boradcast(ipaddr_t * ip,ipaddr_t *mask)
+{
+    if (!ip || !mask) {
+        dbg_error("pram null\r\n");
+        return 0; 
+    }
+    uint32_t host = ipaddr_get_host(ip,mask);
+    if(host == ~mask->q_addr)
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+int is_global_boradcast(ipaddr_t* ip)
+{
+    if (!ip ) {
+        dbg_error("pram null\r\n");
+        return 0; 
+    }
+    ipaddr_t ip_broad = {
+        .type = IPADDR_V4
+    };
+    ipaddr_s2n("255.255.255.255",&ip_broad);
+    if(ip->q_addr == ip_broad.q_addr)
+    {
+        return 1;
+    }
+    return 0;
+}
+
+uint8_t * get_mac_broadcast(void)
+{
+    return mac_broadcast;
+}
+
+uint8_t* get_mac_empty(void)
+{
+    return mac_empty;
+}
+
+int is_mac_broadcast(uint8_t* mac)
+{
+    if(!mac)
+    {
+        dbg_error("param null\r\n");
+        return -1;
+    }
+    if(memcmp(mac,mac_broadcast,MAC_ADDR_ARR_LEN)==0)
+    {
+        return 1;
+    }
+    else{
+        return 0;
+    }
+}
+
+int is_mac_empty(uint8_t* mac)
+{
+    if(!mac)
+    {
+        dbg_error("param null\r\n");
+        return -1;
+    }
+    if(memcmp(mac,mac_empty,MAC_ADDR_ARR_LEN)==0)
+    {
+        return 1;
+    }
+    else{
+        return 0;
+    }
+}

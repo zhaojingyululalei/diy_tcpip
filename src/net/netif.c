@@ -462,12 +462,12 @@ int netif_close(netif_t *netif)
     return 0;
 }
 
-int netif_out(netif_t *netif, ipaddr_t *ip, pkg_t *pkg)
+int netif_out(netif_t *netif, ipaddr_t *ip,ipaddr_t* mask, pkg_t *pkg)
 {
     int ret;
     if (netif->link_ops)
     {
-        ret = netif->link_ops->out(netif, ip, pkg);
+        ret = netif->link_ops->out(netif, ip,mask, pkg);
         if (ret < 0)
         {
             dbg_warning("netif link out a pkg fail\r\n");

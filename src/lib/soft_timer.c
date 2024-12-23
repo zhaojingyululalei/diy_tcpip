@@ -145,8 +145,13 @@ int soft_timer_scan_list(int diff_ms)
         list_node_t* next = cur->next;
         list_remove(&done_list,cur);
         soft_timer_t* timer = list_node_parent(cur,soft_timer_t,node);
-        *timer->ret = timer->handler(timer->arg);
 
+         
+        void* x = timer->handler(timer->arg);
+        if(timer->ret)
+        {
+            *timer->ret = x;
+        }
         if(timer->type == SOFT_TIMER_TYPE_PERIOD)
         {
             timer->cur = timer->reload;
