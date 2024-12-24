@@ -1,0 +1,60 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"pcap.h": "c",
+			"unistd.h": "c",
+			"netif.h": "c",
+			"debug.h": "c",
+			"stdarg.h": "c",
+			"time.h": "c",
+			"clock_t.h": "c",
+			"worker.h": "c",
+			"msg_queue.h": "c",
+			"mempool.h": "c",
+			"thread.h": "c",
+			"list.h": "c",
+			"net_err.h": "c",
+			"exmsg.h": "c",
+			"package.h": "c",
+			"net_cfg.h": "c",
+			"stdint.h": "c",
+			"internet": "c",
+			"executor": "c",
+			"mutex": "c",
+			"net_drive.h": "c",
+			"netif_info.h": "c",
+			"ipaddr.h": "c",
+			"threadpool.h": "c",
+			"types.h": "c",
+			"mmpool.h": "c",
+			"pkg_workbench.h": "c",
+			"loop.h": "c",
+			"networker.h": "c",
+			"bit": "c",
+			"compare": "c",
+			"condition_variable": "c",
+			"cstddef": "c",
+			"forward_list": "c",
+			"list": "c",
+			"string": "c",
+			"buffer": "c",
+			"io_context": "c",
+			"socket": "c",
+			"future": "c",
+			"limits": "c",
+			"memory": "c",
+			"new": "c",
+			"functional": "c",
+			"soft_timer.h": "c",
+			"timer.h": "c",
+			"arp.h": "c",
+			"ether.h": "c",
+			"algrithem.h": "c"
+		}
+	}
+}

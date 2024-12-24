@@ -36,6 +36,7 @@ typedef struct _arp_cache_table_t
 #define ARP_OPCODE_REQUEST  1
 #define ARP_OPCODE_REPLY    2
 #pragma pack(1)
+/*网络序，数据包中的东西统一使用网络序*/
 typedef struct _arp_pkg_t
 {
     uint16_t hard_type;
@@ -62,6 +63,7 @@ int arp_entry_insert_pkg(arp_entry_t* entry,pkg_t* pkg);
 pkg_t* arp_entry_remove_pkg(arp_entry_t* entry,pkg_t* pkg);
 
 void arp_init(void);
+int arp_in(netif_t *netif, pkg_t *pkg);
 int arp_send_request(netif_t* netif, const ipaddr_t* dest_ip);
 int arp_send_no_reply(netif_t* netif);
 int arp_send_reply(netif_t* netif,pkg_t* pkg);

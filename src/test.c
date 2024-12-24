@@ -316,12 +316,15 @@ void test_create_and_add_header()
 
 void test_write_read_memory_ops()
 {
-    char *str = "hello world";
-    char *head = "zhaoj";
-    pkg_t *pkg = package_create(str, strlen(str));
-    package_add_header(pkg, head, strlen(head));
-    char *ret = package_data(pkg, 16, 0);
-    printf("%s\r\n", ret);
+    pkg_t* pkg = package_alloc(512);
+    package_memset(pkg,0,0,pkg->total);
+    package_write_pos(pkg,"hello",5,0);
+    package_write_pos(pkg,"world",5,128);
+    package_write_pos(pkg,"nihao",5,256);
+    package_write_pos(pkg,"hehed",5,384);
+    package_shrank_last(pkg,381);
+    char* ret = package_data(pkg,5,128);
+    printf("ret= %s\r\n",ret);
 }
 void test_package(void)
 {
@@ -473,7 +476,7 @@ void test_phnetif(void)
         uint8_t data_buf[2] = {0x55, 0xAA};
         pkg_t *pkg = package_create(data_buf, 2);
         // arp_send_request(netif,&ip);
-        netif_out(netif, &ip, &mask, pkg);
+        netif_out(netif, &ip,  pkg);
     }
 
     while (1)

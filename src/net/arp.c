@@ -414,7 +414,7 @@ int arp_in(netif_t *netif, pkg_t *pkg)
         return -1;
     }
     arp_pkg_t *arp_pkg = package_data(pkg, sizeof(arp_pkg_t), 0);
-    dbg_info("handling an arp pkg+++++++++++++++++++++++\r\n");
+    dbg_info("+++++++++++++arp in+++++++++++++++++++++++\r\n");
     arp_show(arp_pkg);
     uint16_t opc = 0;
     uint32_t dest_ip_host = 0;

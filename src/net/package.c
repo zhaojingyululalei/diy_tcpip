@@ -7,7 +7,7 @@ static uint8_t pkg_databuf[(sizeof(list_node_t) + sizeof(pkg_dblk_t)) * PKG_DATA
 /**
  * 所有线程中，只有工作线程一个线程，会对数据包进行读写，其他线程仅仅是搬运，不用锁
  */
-//static lock_t pkg_locker;
+// static lock_t pkg_locker;
 static mempool_t pkg_pool;
 static mempool_t pkg_datapool;
 
@@ -86,8 +86,8 @@ int package_collect(pkg_t *package)
     {
         return -3;
     }
-    //lock(&pkg_locker);
-    // 先回收数据块
+    // lock(&pkg_locker);
+    //  先回收数据块
     while (list_count(&package->pkgdb_list) > 0)
     {
 
@@ -97,13 +97,13 @@ int package_collect(pkg_t *package)
         ret = mempool_free_blk(&pkg_datapool, blk);
         if (ret != 0)
         {
-            //un//lock(&pkg_locker);
+            // un//lock(&pkg_locker);
             return ret;
         }
     }
     package_destory(package);
     ret = mempool_free_blk(&pkg_pool, package);
-    //un//lock(&pkg_locker);
+    // un//lock(&pkg_locker);
     return 0;
 }
 
@@ -116,7 +116,7 @@ pkg_t *package_alloc(int size)
     {
         return NULL;
     }
-    //lock(&pkg_locker);
+    // lock(&pkg_locker);
     package_init(package, size);
     int remain_size = size;
     while (remain_size > 0)
@@ -128,7 +128,7 @@ pkg_t *package_alloc(int size)
             ret = package_collect(package);
             if (ret != 0)
                 dbg_error("not ok here\n");
-            //un//lock(&pkg_locker);
+            // un//lock(&pkg_locker);
             return NULL;
         }
         dblk->size = PKG_DATA_BLK_SIZE;
@@ -141,7 +141,7 @@ pkg_t *package_alloc(int size)
         }
         remain_size -= PKG_DATA_BLK_SIZE;
     }
-    //un//lock(&pkg_locker);
+    // un//lock(&pkg_locker);
     package->pos = size;
     package_lseek(package, 0);
     return package;
@@ -149,7 +149,7 @@ pkg_t *package_alloc(int size)
 
 int package_expand_front(pkg_t *package, int ex_size)
 {
-    //lock(&pkg_locker);
+    // lock(&pkg_locker);
     package->total += ex_size;
     list_t *fnode = list_first(&package->pkgdb_list);
     pkg_dblk_t *fdata = list_node_parent(fnode, pkg_dblk_t, node);
@@ -173,20 +173,20 @@ int package_expand_front(pkg_t *package, int ex_size)
             package->total -= ex_size;
             fdata->offset = oringal_offset;
             fdata->size = oringal_size;
-            //un//lock(&pkg_locker);
+            // un//lock(&pkg_locker);
             return -2;
         }
         new_blk->size = new_size;
         new_blk->offset = PKG_DATA_BLK_SIZE - new_size;
         list_insert_first(&package->pkgdb_list, &new_blk->node);
     }
-    //un//lock(&pkg_locker);
+    // un//lock(&pkg_locker);
     return 0;
 }
 
 int package_expand_last(pkg_t *package, int ex_size)
 {
-    //lock(&pkg_locker);
+    // lock(&pkg_locker);
     package->total += ex_size;
     list_t *lnode = list_last(&package->pkgdb_list);
     pkg_dblk_t *lblk = list_node_parent(lnode, pkg_dblk_t, node);
@@ -208,7 +208,7 @@ int package_expand_last(pkg_t *package, int ex_size)
             package->total -= ex_size;
             lblk->size = original_size;
             lblk->offset = original_offset;
-            //un//lock(&pkg_locker);
+            // un//lock(&pkg_locker);
             return -2;
         }
         int new_size = ex_size - last_leave;
@@ -216,38 +216,38 @@ int package_expand_last(pkg_t *package, int ex_size)
         blk->offset = 0;
         list_insert_last(&package->pkgdb_list, &blk->node);
     }
-    //un//lock(&pkg_locker);
+    // un//lock(&pkg_locker);
     return 0;
 }
 
 int package_expand_front_align(pkg_t *package, int ex_size)
 {
-    //lock(&pkg_locker);
+    // lock(&pkg_locker);
     package->total += ex_size;
     list_node_t *fnode = list_first(&package->pkgdb_list);
     pkg_dblk_t *fdata = list_node_parent(fnode, pkg_dblk_t, node);
     int front_leave = fdata->offset;
-    //前面空间够
+    // 前面空间够
     if (front_leave >= ex_size)
     {
         fdata->offset -= ex_size;
         fdata->size += ex_size;
     }
-    else//前面空间不够
+    else // 前面空间不够
     {
         pkg_dblk_t *new_blk = mempool_alloc_blk(&pkg_datapool, -1);
-        memset(new_blk,0,sizeof(pkg_dblk_t));
+        memset(new_blk, 0, sizeof(pkg_dblk_t));
         if (new_blk == NULL)
         {
             package->total -= ex_size;
-            //un//lock(&pkg_locker);
+            // un//lock(&pkg_locker);
             return -2;
         }
         new_blk->offset = PKG_DATA_BLK_SIZE - ex_size;
         new_blk->size = ex_size;
         list_insert_first(&package->pkgdb_list, &new_blk->node);
     }
-    //un//lock(&pkg_locker);
+    // un//lock(&pkg_locker);
     return 0;
 }
 
@@ -267,7 +267,7 @@ int package_show_info(pkg_t *package)
         return -1;
     }
     int count = 0, i = 1;
-    //lock(&pkg_locker);
+    // lock(&pkg_locker);
     list_node_t *cur = &package->node;
     while (cur)
     {
@@ -286,7 +286,7 @@ int package_show_info(pkg_t *package)
         curblk = package_get_next_datablk(curblk);
     }
     dbg_info("pkg sum data block cnt is %d\n", i - 1);
-    //un//lock(&pkg_locker);
+    // un//lock(&pkg_locker);
     dbg_info("\n");
     return 0;
 }
@@ -299,97 +299,96 @@ int package_add_headspace(pkg_t *package, int h_size)
 }
 pkg_dblk_t *package_get_next_datablk(pkg_dblk_t *cur_blk)
 {
-    //lock(&pkg_locker);
+    // lock(&pkg_locker);
     list_node_t *next_node = cur_blk->node.next;
     if (next_node == NULL)
     {
-        //un//lock(&pkg_locker);
+        // un//lock(&pkg_locker);
         return NULL;
     }
     pkg_dblk_t *next_blk = list_node_parent(next_node, pkg_dblk_t, node);
-    //un//lock(&pkg_locker);
+    // un//lock(&pkg_locker);
     return next_blk;
 }
 pkg_dblk_t *package_get_pre_datablk(pkg_dblk_t *cur_blk)
 {
-    //lock(&pkg_locker);
+    // lock(&pkg_locker);
     list_node_t *pre_node = cur_blk->node.pre;
     if (pre_node == NULL)
     {
-        //un//lock(&pkg_locker);
+        // un//lock(&pkg_locker);
         return NULL;
     }
     pkg_dblk_t *pre_blk = list_node_parent(pre_node, pkg_dblk_t, node);
-    //un//lock(&pkg_locker);
+    // un//lock(&pkg_locker);
     return pre_blk;
 }
 
 int package_remove_one_blk(pkg_t *package, pkg_dblk_t *delblk)
 {
-    //lock(&pkg_locker);
+    // lock(&pkg_locker);
     if (package == NULL || delblk == NULL)
     {
-        //un//lock(&pkg_locker);
+        // un//lock(&pkg_locker);
         return -1;
     }
     list_t *list = &package->pkgdb_list;
     list_node_t *delnode = &delblk->node;
     list_remove(list, delnode);
     mempool_free_blk(&pkg_datapool, delblk);
-    //un//lock(&pkg_locker);
+    // un//lock(&pkg_locker);
     return 0;
 }
 
 pkg_dblk_t *package_get_first_datablk(pkg_t *package)
 {
-    //lock(&pkg_locker);
+    // lock(&pkg_locker);
     list_t *list = &package->pkgdb_list;
     list_node_t *fnode = list_first(list);
     if (fnode == NULL)
     {
-        //un//lock(&pkg_locker);
+        // un//lock(&pkg_locker);
         dbg_error("pkg has no blk\n");
         return NULL;
     }
     else
     {
-        //un//lock(&pkg_locker);
+        // un//lock(&pkg_locker);
         return list_node_parent(fnode, pkg_dblk_t, node);
     }
-    //un//lock(&pkg_locker);
+    // un//lock(&pkg_locker);
     return NULL;
 }
 pkg_dblk_t *package_get_last_datablk(pkg_t *package)
 {
-    //lock(&pkg_locker);
+    // lock(&pkg_locker);
     list_t *list = &package->pkgdb_list;
     list_node_t *lnode = list_last(list);
     if (lnode == NULL)
     {
-        //un//lock(&pkg_locker);
+        // un//lock(&pkg_locker);
         dbg_error("pkg has no blk\n");
         return NULL;
     }
     else
     {
-        //un//lock(&pkg_locker);
+        // un//lock(&pkg_locker);
         return list_node_parent(lnode, pkg_dblk_t, node);
     }
-    //un//lock(&pkg_locker);
+    // un//lock(&pkg_locker);
     return NULL;
 }
 
 int package_shrank_front(pkg_t *package, int sh_size)
 {
     int ret = 0;
-    //lock(&pkg_locker);
+    // lock(&pkg_locker);
     if (sh_size > package->total)
     {
-        //un//lock(&pkg_locker);
+        // un//lock(&pkg_locker);
         dbg_error("sh_size > pkg size");
         return -1;
     }
-    
 
     pkg_dblk_t *fblk = package_get_first_datablk(package);
     if (fblk->size > sh_size)
@@ -406,17 +405,23 @@ int package_shrank_front(pkg_t *package, int sh_size)
     else
     {
         int leave_sh_size = sh_size - fblk->size;
-        ret = package_remove_one_blk(package, fblk);
-        if (ret != 0)
-            dbg_warning("package remove one blk fail...\n");
-        fblk = package_get_first_datablk(package);
+        int rmv_count = leave_sh_size / PKG_DATA_BLK_SIZE + 1; // 移除剩余块+移除当前块
+        leave_sh_size = leave_sh_size % PKG_DATA_BLK_SIZE;
+        for (int i = 0; i < rmv_count; ++i)
+        {
+            ret = package_remove_one_blk(package, fblk);
+            if (ret != 0)
+                dbg_warning("package remove one blk fail...\n");
+            fblk = package_get_first_datablk(package);
+        }
+
         fblk->size -= leave_sh_size;
         fblk->offset += leave_sh_size;
     }
-    //un//lock(&pkg_locker);
+    // un//lock(&pkg_locker);
     package->total -= sh_size;
-    ret = package_lseek(package,0);
-    if(ret<0)
+    ret = package_lseek(package, 0);
+    if (ret < 0)
     {
         dbg_error("pkg lseek fail\r\n");
     }
@@ -426,10 +431,10 @@ int package_shrank_front(pkg_t *package, int sh_size)
 int package_shrank_last(pkg_t *package, int sh_size)
 {
     int ret = 0;
-    //lock(&pkg_locker);
+    // lock(&pkg_locker);
     if (sh_size > package->total)
     {
-        //un//lock(&pkg_locker);
+        // un//lock(&pkg_locker);
         dbg_error("sh_size > pkg size");
         return -1;
     }
@@ -448,16 +453,22 @@ int package_shrank_last(pkg_t *package, int sh_size)
     else
     {
         int leave_sh_size = sh_size - lblk->size;
-        ret = package_remove_one_blk(package, lblk);
-        if (ret != 0)
-            dbg_warning("package remove one blk fail...\n");
-        lblk = package_get_last_datablk(package);
+        int rmv_count = leave_sh_size / PKG_DATA_BLK_SIZE + 1; // 移除剩余块+移除当前块
+        leave_sh_size = leave_sh_size % PKG_DATA_BLK_SIZE;
+        for (int i = 0; i < rmv_count; ++i)
+        {
+            ret = package_remove_one_blk(package, lblk);
+            if (ret != 0)
+                dbg_warning("package remove one blk fail...\n");
+            lblk = package_get_last_datablk(package);
+        }
+
         lblk->size -= leave_sh_size;
     }
-    //un//lock(&pkg_locker);
+    // un//lock(&pkg_locker);
     package->total -= sh_size;
-    ret = package_lseek(package,package->pos);
-    if(ret<0)
+    ret = package_lseek(package, 0);
+    if (ret < 0)
     {
         dbg_error("pkg lseek fail\r\n");
     }
@@ -481,12 +492,12 @@ int package_integrate_header(pkg_t *package, int all_hsize)
         return -1;
     }
 
-    //lock(&pkg_locker);
+    // lock(&pkg_locker);
 
     list_node_t *fnode = list_first(&package->pkgdb_list);
     if (fnode == NULL)
     {
-        //un//lock(&pkg_locker);
+        // un//lock(&pkg_locker);
         dbg_error("Package data block list is empty!\n");
         return -1; // 空包检查
     }
@@ -496,7 +507,7 @@ int package_integrate_header(pkg_t *package, int all_hsize)
     // 如果第一个数据块足够容纳所有头数据，无需整合
     if (fblk->size >= all_hsize)
     {
-        //un//lock(&pkg_locker);
+        // un//lock(&pkg_locker);
         return 0;
     }
 
@@ -512,7 +523,7 @@ int package_integrate_header(pkg_t *package, int all_hsize)
     pkg_dblk_t *next = package_get_next_datablk(fblk);
     if (next == NULL)
     {
-        //un//lock(&pkg_locker);
+        // un//lock(&pkg_locker);
         dbg_error("Header size may be incorrect, not enough data blocks!\n");
         return -1;
     }
@@ -539,7 +550,7 @@ int package_integrate_header(pkg_t *package, int all_hsize)
         package_remove_one_blk(package, next);
     }
 
-    //un//lock(&pkg_locker);
+    // un//lock(&pkg_locker);
 
     return 0;
 }
@@ -552,19 +563,19 @@ int package_integrate_two_continue_blk(pkg_t *package, pkg_dblk_t *blk)
         return 0;
     }
 
-    //lock(&pkg_locker);
+    // lock(&pkg_locker);
 
     pkg_dblk_t *next = package_get_next_datablk(blk);
     if (next == NULL)
     {
-        //un//lock(&pkg_locker);
+        // un//lock(&pkg_locker);
         return 0;
     }
 
     int both_size = blk->size + next->size;
     if (both_size > PKG_DATA_BLK_SIZE)
     {
-        //un//lock(&pkg_locker);
+        // un//lock(&pkg_locker);
         return 0;
     }
 
@@ -581,7 +592,7 @@ int package_integrate_two_continue_blk(pkg_t *package, pkg_dblk_t *blk)
         dbg_warning("Failed to remove the next block\n");
     }
 
-    //un//lock(&pkg_locker);
+    // un//lock(&pkg_locker);
     return 1;
 }
 
@@ -592,7 +603,7 @@ int package_join(pkg_t *from, pkg_t *to)
         return -1;
     }
 
-    //lock(&pkg_locker);
+    // lock(&pkg_locker);
 
     // 合并两包的总大小
     to->total += from->total;
@@ -605,7 +616,7 @@ int package_join(pkg_t *from, pkg_t *to)
     // 清理 from 的内容
     if (package_collect(from) != 0)
     {
-        //un//lock(&pkg_locker);
+        // un//lock(&pkg_locker);
         dbg_warning("Failed to clean the source package\n");
         return -1;
     }
@@ -618,16 +629,16 @@ int package_join(pkg_t *from, pkg_t *to)
         curblk = package_get_next_datablk(curblk);
     }
 
-    //un//lock(&pkg_locker);
+    // un//lock(&pkg_locker);
     return 0;
 }
 
 int package_write(pkg_t *package, const uint8_t *buf, int len)
 {
-    //lock(&pkg_locker);
+    // lock(&pkg_locker);
     if (package == NULL || buf == NULL)
     {
-        //un//lock(&pkg_locker);
+        // un//lock(&pkg_locker);
         return -1;
     }
     if (package->pos + len > package->total)
@@ -638,7 +649,7 @@ int package_write(pkg_t *package, const uint8_t *buf, int len)
     pkg_dblk_t *blk = package->curblk;
     if (blk == NULL)
     {
-        //un//lock(&pkg_locker);
+        // un//lock(&pkg_locker);
         return -1;
     }
 
@@ -663,10 +674,10 @@ int package_write(pkg_t *package, const uint8_t *buf, int len)
         remain_size -= write_size;
         package->inner_offset += write_size;
 
-        if (remain_size >0 || package->inner_offset+blk->offset >= PKG_DATA_BLK_SIZE)
+        if (remain_size > 0 || package->inner_offset + blk->offset >= PKG_DATA_BLK_SIZE)
         {
             blk = package_get_next_datablk(blk);
-            if(!blk)
+            if (!blk)
             {
                 package->curblk = NULL;
                 package->inner_offset = 0;
@@ -679,7 +690,7 @@ int package_write(pkg_t *package, const uint8_t *buf, int len)
 
     package->pos += len - remain_size; // 总写入位置更新
 
-    //un//lock(&pkg_locker);
+    // un//lock(&pkg_locker);
 
     return len - remain_size;
 }
@@ -689,7 +700,7 @@ int package_read(pkg_t *package, uint8_t *buf, int len)
     if (package == NULL || buf == NULL || len <= 0)
         return -1;
 
-    //lock(&pkg_locker);
+    // lock(&pkg_locker);
 
     if (package->pos + len > package->total)
     {
@@ -699,7 +710,7 @@ int package_read(pkg_t *package, uint8_t *buf, int len)
     pkg_dblk_t *blk = package->curblk;
     if (blk == NULL)
     {
-        //un//lock(&pkg_locker);
+        // un//lock(&pkg_locker);
         return 0; // 数据块为空或偏移非法
     }
 
@@ -707,9 +718,9 @@ int package_read(pkg_t *package, uint8_t *buf, int len)
     int remain_size = len;
     int read_size = 0;
 
-    while(remain_size>0)
+    while (remain_size > 0)
     {
-        if(remain_size < blk->size - package->inner_offset)
+        if (remain_size < blk->size - package->inner_offset)
         {
             read_size = remain_size;
         }
@@ -718,16 +729,16 @@ int package_read(pkg_t *package, uint8_t *buf, int len)
             read_size = blk->size - package->inner_offset;
         }
 
-        uint8_t* src = &blk->data[blk->offset + package->inner_offset];
-        memcpy(dest,src,read_size);
+        uint8_t *src = &blk->data[blk->offset + package->inner_offset];
+        memcpy(dest, src, read_size);
         dest += read_size;
         remain_size -= read_size;
         package->inner_offset += read_size;
 
-        if(remain_size>0||package->inner_offset+blk->offset >= PKG_DATA_BLK_SIZE)
+        if (remain_size > 0 || package->inner_offset + blk->offset >= PKG_DATA_BLK_SIZE)
         {
             blk = package_get_next_datablk(blk);
-            if(!blk)
+            if (!blk)
             {
                 package->curblk = NULL;
                 package->inner_offset = 0;
@@ -739,66 +750,66 @@ int package_read(pkg_t *package, uint8_t *buf, int len)
     }
 
     package->pos += len - remain_size; // 总读取位置更新
-    //un//lock(&pkg_locker);
+    // un//lock(&pkg_locker);
 
     return len - remain_size; // 返回实际读取的字节数
 }
 
-int package_write_pos(pkg_t *package, const uint8_t *buf, int len,int position)
+int package_write_pos(pkg_t *package, const uint8_t *buf, int len, int position)
 {
     int ret;
-    //lock(&pkg_locker);
-    
-    if(position>=0)
+    // lock(&pkg_locker);
+
+    if (position >= 0)
     {
-        ret = package_lseek(package,position);
-        if(ret<0)
+        ret = package_lseek(package, position);
+        if (ret < 0)
         {
-            //un//lock(&pkg_locker);
+            // un//lock(&pkg_locker);
             dbg_error("pkg_lseek wrong\r\n");
             return ret;
         }
     }
-    ret = package_write(package,buf,len);
-    if(ret<0)
+    ret = package_write(package, buf, len);
+    if (ret < 0)
     {
-        //un//lock(&pkg_locker);
+        // un//lock(&pkg_locker);
         dbg_error("pkg write wrong\r\n");
         return ret;
     }
-    //un//lock(&pkg_locker);
+    // un//lock(&pkg_locker);
     return 0;
 }
-int package_read_pos(pkg_t *package, uint8_t *buf, int len,int position)
+int package_read_pos(pkg_t *package, uint8_t *buf, int len, int position)
 {
     int ret;
-    //lock(&pkg_locker);
-    if(position>=0)
+    // lock(&pkg_locker);
+    if (position >= 0)
     {
-        ret = package_lseek(package,position);
-        if(ret<0)
+        ret = package_lseek(package, position);
+        if (ret < 0)
         {
-            //un//lock(&pkg_locker);
+            // un//lock(&pkg_locker);
             dbg_error("pkg_lseek wrong\r\n");
             return ret;
         }
     }
-    ret = package_read(package,buf,len);
-    if(ret<0)
+    ret = package_read(package, buf, len);
+    if (ret < 0)
     {
-        //un//lock(&pkg_locker);
+        // un//lock(&pkg_locker);
         dbg_error("pkg read wrong\r\n");
         return ret;
     }
-    //un//lock(&pkg_locker);
+    // un//lock(&pkg_locker);
     return 0;
 }
 int package_lseek(pkg_t *package, int offset)
 {
-    //lock(&pkg_locker);
+    // lock(&pkg_locker);
     if (package == NULL || offset < 0 || offset > package->total)
     {
-        //un//lock(&pkg_locker);
+        // un//lock(&pkg_locker);
         return -1;
     }
 
@@ -820,7 +831,7 @@ int package_lseek(pkg_t *package, int offset)
         package->inner_offset = 0;
     }
 
-    //un//lock(&pkg_locker);
+    // un//lock(&pkg_locker);
     return 0;
 }
 
@@ -831,7 +842,7 @@ int package_memcpy(pkg_t *dest_pkg, int dest_offset, pkg_t *src_pkg, int src_off
         return -1;
     }
     int ret;
-    //lock(&pkg_locker);
+    // lock(&pkg_locker);
 
     package_lseek(dest_pkg, dest_offset);
     package_lseek(src_pkg, src_offset);
@@ -841,7 +852,7 @@ int package_memcpy(pkg_t *dest_pkg, int dest_offset, pkg_t *src_pkg, int src_off
     ret = package_read(src_pkg, buf, PKG_DATA_BLK_SIZE);
     package_write(dest_pkg, buf, ret);
 
-    //un//lock(&pkg_locker);
+    // un//lock(&pkg_locker);
 
     return 0;
 }
@@ -854,19 +865,18 @@ int package_memset(pkg_t *package, int offset, uint8_t value, int len)
     }
     int ret;
 
-    uint8_t* arr = malloc(len);
-    memset(arr,0,len);
-    //lock(&pkg_locker);
-    ret = package_write_pos(package,arr,len,offset);
-    if(ret<0)
+    uint8_t *arr = malloc(len);
+    memset(arr, 0, len);
+    // lock(&pkg_locker);
+    ret = package_write_pos(package, arr, len, offset);
+    if (ret < 0)
     {
-        //un//lock(&pkg_locker);
+        // un//lock(&pkg_locker);
         free(arr);
         return ret;
     }
 
-    
-    //un//lock(&pkg_locker);
+    // un//lock(&pkg_locker);
     free(arr);
 
     return 0;
@@ -947,29 +957,29 @@ void package_print(pkg_t *pkg)
 }
 
 /*整合数据包头,并返回所需数据position的首地址*/
-uint8_t *package_data(pkg_t *pkg,int len,int position)
+uint8_t *package_data(pkg_t *pkg, int len, int position)
 {
     int x;
     if (!pkg || !pkg->curblk)
     {
         return NULL; // 检查空指针情况
     }
-    if(len<0 || len >PKG_DATA_BLK_SIZE)
+    if (len < 0 || len > PKG_DATA_BLK_SIZE)
     {
         dbg_error("len is wrong\r\n");
         return NULL;
     }
-    if(position>=0)
+    if (position >= 0)
     {
-        x = package_lseek(pkg,position);
-        if(x <0)
+        x = package_lseek(pkg, position);
+        if (x < 0)
         {
             dbg_error("pkg lseek err\r\n");
             return NULL;
         }
     }
-    package_integrate_header(pkg,len);
-    package_lseek(pkg,pkg->pos);//数据包头整合后，curk或者pos等会受影响，重新定位
+    package_integrate_header(pkg, len);
+    package_lseek(pkg, pkg->pos); // 数据包头整合后，curk或者pos等会受影响，重新定位
     uint8_t *ret = &pkg->curblk->data[pkg->curblk->offset + pkg->inner_offset];
     return ret;
 }

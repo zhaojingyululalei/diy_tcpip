@@ -69,7 +69,7 @@ static mempool_t netif_pool;
 static netif_t netifs[NETIF_MAX_NR * (sizeof(netif_t) + sizeof(list_node_t))];
 static list_t netif_list;
 static lock_t netif_list_locker;
-static link_layer_t *link_layers[NETIF_TYPE_SIZE];
+static link_layer_t *link_layers[NETIF_TYPE_SIZE] = {0};
 int netif_register_link_layer(link_layer_t *layer)
 {
     netif_type_t type = layer->type;
@@ -462,12 +462,12 @@ int netif_close(netif_t *netif)
     return 0;
 }
 
-int netif_out(netif_t *netif, ipaddr_t *ip,ipaddr_t* mask, pkg_t *pkg)
+int netif_out(netif_t *netif, ipaddr_t *ip, pkg_t *pkg)
 {
     int ret;
     if (netif->link_ops)
     {
-        ret = netif->link_ops->out(netif, ip,mask, pkg);
+        ret = netif->link_ops->out(netif, ip, pkg);
         if (ret < 0)
         {
             dbg_warning("netif link out a pkg fail\r\n");

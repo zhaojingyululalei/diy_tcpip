@@ -5,6 +5,7 @@
 #include "loop.h"
 #include "networker.h"
 #include "arp.h"
+#include "ipv4.h"
 threadpool_t netthread_pool;
 
 /**
@@ -29,6 +30,7 @@ void net_system_init(void)
     //数据链路层初始化
     ether_init();
     arp_init();
+    ipv4_init();
     return;
     
 }

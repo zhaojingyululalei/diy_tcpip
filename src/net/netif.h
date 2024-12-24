@@ -53,7 +53,7 @@ typedef struct _link_layer_t
     int (*open)(struct _netif_t *netif);
     void (*close)(struct _netif_t *netif);
     int (*in)(struct _netif_t *netif, pkg_t *package);
-    int (*out)(struct _netif_t *netif, ipaddr_t *dest,ipaddr_t* mask, pkg_t *package);
+    int (*out)(struct _netif_t *netif, ipaddr_t *dest, pkg_t *package);
 } link_layer_t;
 typedef struct _netif_t
 {
@@ -111,7 +111,7 @@ int netif_open(netif_t *netif);
 int netif_activate(netif_t *netif);
 int netif_shutdown(netif_t *netif);
 int netif_close(netif_t *netif);
-int netif_out(netif_t* netif,ipaddr_t* ip,ipaddr_t* mask, pkg_t* pkg);
+int netif_out(netif_t *netif, ipaddr_t *ip, pkg_t *pkg);
 
 pkg_t *netif_getpkg(msgQ_t *queue,int ms);
 int netif_putpkg(msgQ_t *queue, pkg_t *pkg,int ms);

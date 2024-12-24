@@ -20,7 +20,7 @@ static void(ether_close)(struct _netif_t *netif)
 {
     return;
 }
-static int ether_pkg_is_ok(ether_header_t *header, int pkg_len)
+static int ether_pkg_is_ok(netif_t* netif,ether_header_t *header, int pkg_len)
 {
     if (pkg_len > sizeof(ether_header_t) + MTU_MAX_SIZE)
     {
@@ -32,6 +32,11 @@ static int ether_pkg_is_ok(ether_header_t *header, int pkg_len)
     {
         dbg_warning("ether pkg len so small\r\n");
         return -2;
+    }
+    if(memcmp(netif->macaddr,header->dest,MAC_ADDR_ARR_LEN)!=0)
+    {
+        dbg_error("ether recv a pkg,dest mac addr not me\r\n");
+        return -3;
     }
     return 0;
 }
@@ -63,30 +68,32 @@ static void ether_dbg_print_pkg(pkg_t *pkg)
     dbg_info("*********************************************\r\n");
 #endif
 }
+#include "ipv4.h"
 static int(ether_in)(struct _netif_t *netif, pkg_t *package)
 {
     int ret;
 
     ether_header_t *header = package_data(package, sizeof(ether_header_t), 0);
-    if (ether_pkg_is_ok(header, package->total) < 0)
+    if (ether_pkg_is_ok(netif,header, package->total) < 0)
     {
         dbg_warning("ether pkg problem,can not handle\r\n");
         return -1;
     }
 
+
     ether_dbg_print_pkg(package);
     uint16_t protocal = 0;
     _ntohs(header->protocal, &protocal);
+    // 去掉以太网头
+    ret = package_shrank_front(package, sizeof(ether_header_t));
+    if (ret < 0)
+    {
+        dbg_error("package_shrank_fail\r\n");
+        return ret;
+    }
     switch (protocal)
     {
     case PROTOCAL_TYPE_ARP:
-        // 去掉以太网头
-        ret = package_shrank_front(package, sizeof(ether_header_t));
-        if (ret < 0)
-        {
-            dbg_error("package_shrank_fail\r\n");
-            return ret;
-        }
         ret = arp_in(netif, package);
         if (ret < 0)
         {
@@ -94,7 +101,15 @@ static int(ether_in)(struct _netif_t *netif, pkg_t *package)
             return ret;
         }
         break;
+    case PROTOCAL_TYPE_IPV4:
 
+        ret = ipv4_in(netif, package);
+        if (ret < 0)
+        {
+            dbg_warning("arp pkg handle \r\n");
+            return ret;
+        }
+        break;
     default:
         dbg_warning("unkown protocal pkg\r\n");
         return -1;
@@ -146,7 +161,7 @@ int ether_raw_out(netif_t *netif, protocal_type_t type, const uint8_t *mac_dest,
         netif_putpkg(&netif->out_q, pkg, -1);
     }
 }
-static int(ether_out)(struct _netif_t *netif, ipaddr_t *dest, ipaddr_t *mask, pkg_t *package)
+static int(ether_out)(struct _netif_t *netif, ipaddr_t *dest,  pkg_t *package)
 {
     int ret;
     netif_t *target = is_ip_host(dest);
@@ -165,19 +180,19 @@ static int(ether_out)(struct _netif_t *netif, ipaddr_t *dest, ipaddr_t *mask, pk
     else
     {
 
-        // 如果是外部ip
+        // 如果是外部ip,
 
-        if (is_local_boradcast(dest, mask) || is_global_boradcast(dest))
+        if (is_local_boradcast(dest, &netif->info.mask) || is_global_boradcast(dest))
         {
-            // 如果是广播ip,直接发
+            // 如果是广播ip,直接发，不用查看arp缓存
             ret = ether_raw_out(netif, PROTOCAL_TYPE_IPV4, get_mac_broadcast(), package);
             if (ret < 0)
             {
                 return ret;
             }
         }
-        //否则
-        // 查找arp缓存表
+        // 否则
+        //  查找arp缓存表
         arp_entry_t *entry = arp_cache_find(&arp_cache_table, dest);
         if (entry)
         {
@@ -194,11 +209,12 @@ static int(ether_out)(struct _netif_t *netif, ipaddr_t *dest, ipaddr_t *mask, pk
             {
                 // mac_dest为全0，还没解析出来
                 // 把数据包放缓存里，等解析出mac地址，一起发出去
-                if(list_count(&entry->pkg_list)<ARP_ENTRY_PKG_CACHE_MAX_SIZE)
+                if (list_count(&entry->pkg_list) < ARP_ENTRY_PKG_CACHE_MAX_SIZE)
                 {
                     arp_entry_insert_pkg(entry, package);
                 }
-                else{
+                else
+                {
                     dbg_warning("too many pkg in entry pkg cache,drop one\r\n");
                 }
             }
@@ -215,19 +231,19 @@ static int(ether_out)(struct _netif_t *netif, ipaddr_t *dest, ipaddr_t *mask, pk
             new_entry->netif = netif;
             new_entry->tmo = ARP_ENTRY_TMO_STABLE;
             new_entry->retry = ARP_ENTRY_RETRY;
-            //分配表项，并加入arp cache table
+            // 分配表项，并加入arp cache table
             arp_cache_insert_entry(&arp_cache_table, new_entry);
-            //将数据包放入entry pkg list缓存
-            arp_entry_insert_pkg(new_entry,package);
+            // 将数据包放入entry pkg list缓存
+            arp_entry_insert_pkg(new_entry, package);
             arp_show_cache_list();
-            //发送arp请求包
-            ret = arp_send_request(netif,dest);
+            // 发送arp请求包
+            ret = arp_send_request(netif, dest);
             return ret;
         }
     }
     return 0;
 }
-static const link_layer_t link_layer = {
+static const link_layer_t ether_link_layer = {
     .type = NETIF_TYPE_ETH,
     .open = ether_open,
     .close = ether_close,
@@ -236,5 +252,5 @@ static const link_layer_t link_layer = {
 };
 void ether_init(void)
 {
-    netif_register_link_layer(&link_layer);
+    netif_register_link_layer(&ether_link_layer);
 }

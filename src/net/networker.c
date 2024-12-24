@@ -4,6 +4,7 @@
 #include "netif.h"
 #include "soft_timer.h"
 #include "timer.h"
+#include "ipv4.h"
 semaphore_t mover_sem;
 // 数据包搬运工,采集网卡数据,放入工作台
 DEFINE_THREAD_FUNC(mover)
@@ -16,7 +17,7 @@ DEFINE_THREAD_FUNC(mover)
         while (cur)
         {
             // 从inq获取一个数据包放入工作台
-            pkg_t *pkg = netif_getpkg(&cur->in_q,-1); // 非阻塞
+            pkg_t *pkg = netif_getpkg(&cur->in_q, -1); // 非阻塞
             if (pkg)
             {
 
@@ -50,8 +51,21 @@ static int handle(netif_t *netif, pkg_t *pkg)
     else
     {
         // 数据链路层不存在
-        package_collect(pkg);
-        return -2;
+        if (netif->info.type = NETIF_TYPE_LOOP)
+        {
+            //loop本身没网卡，没物理地址，没有链路层，link_layer层，因此特殊处理，直接ip层
+            ret = ipv4_in(netif,pkg);
+            if(ret < 0)
+            {
+                package_collect(pkg);
+            }
+        }
+        else
+        {
+            //如果是ether类型，没有link_layer层操作，直接释放包。
+            package_collect(pkg);
+            return -2;
+        }
     }
     return 0;
 }
@@ -74,7 +88,7 @@ DEFINE_THREAD_FUNC(worker)
             ret = handle(netif, pkg);
         }
         uint32_t after = get_cur_time_ms();
-        soft_timer_scan_list(after-before);
+        soft_timer_scan_list(after - before);
         // //数据包处理正确，才可以往out_q里面放
         // if (ret >= 0)
         // {
