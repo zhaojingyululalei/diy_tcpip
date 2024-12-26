@@ -8,6 +8,10 @@
 #define IPV4_HEAD_VERSION   4
 #define IPV4_HEAD_MIN_SIZE  20
 #define IPV4_HEAD_MAX_SIZE  60
+#define IPV4_HEAD_FLAGS_MORE_FRAGMENT    (1<<0)
+#define IPV4_HEAD_FLAGS_NOT_FRAGMENT    (1<<1)
+#define IPV4_HEAD_FLAGS_RESERVED_BIT    (1<<2)
+#define IPV4_HEAD_TTL_DEFAULT   64
 #pragma pack(1)
 /*网络序，数据包中的东西统一使用网络序*/
 typedef struct _ipv4_header_t
@@ -43,7 +47,8 @@ typedef struct _ipv4_head_parse_t
     uint32_t dest_ip;         // 目标IP地址 (主机字节序)
 } ipv4_head_parse_t;
 void ipv4_init(void);
-
+void parse_ipv4_header(const ipv4_header_t *ip_head, ipv4_head_parse_t *parsed);
+void ipv4_set_header(const ipv4_head_parse_t* parsed, ipv4_header_t* head) ;
 int ipv4_in(netif_t* netif,pkg_t* pkg);
-
+int ipv4_out(pkg_t* pkg,uint8_t protocal,ipaddr_t* src,ipaddr_t* dest);
 #endif

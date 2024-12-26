@@ -186,40 +186,6 @@ uint32_t ipaddr_get_net(ipaddr_t * ip,ipaddr_t *mask)
     return net;
 }
 
-int is_local_boradcast(ipaddr_t * ip,ipaddr_t *mask)
-{
-    if (!ip || !mask) {
-        dbg_error("pram null\r\n");
-        return 0; 
-    }
-    uint32_t host = ipaddr_get_host(ip,mask);
-    if(host == ~mask->q_addr)
-    {
-        return 1;
-    }
-    else
-    {
-        return 0;
-    }
-}
-
-int is_global_boradcast(ipaddr_t* ip)
-{
-    if (!ip ) {
-        dbg_error("pram null\r\n");
-        return 0; 
-    }
-    ipaddr_t ip_broad = {
-        .type = IPADDR_V4
-    };
-    ipaddr_s2n("255.255.255.255",&ip_broad);
-    if(ip->q_addr == ip_broad.q_addr)
-    {
-        return 1;
-    }
-    return 0;
-}
-
 uint8_t * get_mac_broadcast(void)
 {
     return mac_broadcast;

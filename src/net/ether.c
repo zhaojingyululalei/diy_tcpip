@@ -33,9 +33,10 @@ static int ether_pkg_is_ok(netif_t* netif,ether_header_t *header, int pkg_len)
         dbg_warning("ether pkg len so small\r\n");
         return -2;
     }
-    if(memcmp(netif->macaddr,header->dest,MAC_ADDR_ARR_LEN)!=0)
+    if(memcmp(netif->macaddr,header->dest,MAC_ADDR_ARR_LEN)!=0 
+        && memcmp(get_mac_broadcast(),header->dest,MAC_ADDR_ARR_LEN)!=0)
     {
-        dbg_error("ether recv a pkg,dest mac addr not me\r\n");
+        dbg_error("ether recv a pkg,dest mac addr wrong\r\n");
         return -3;
     }
     return 0;
@@ -182,7 +183,7 @@ static int(ether_out)(struct _netif_t *netif, ipaddr_t *dest,  pkg_t *package)
 
         // 如果是外部ip,
 
-        if (is_local_boradcast(dest, &netif->info.mask) || is_global_boradcast(dest))
+        if (is_local_boradcast(netif,dest) || is_global_boradcast(dest))
         {
             // 如果是广播ip,直接发，不用查看arp缓存
             ret = ether_raw_out(netif, PROTOCAL_TYPE_IPV4, get_mac_broadcast(), package);

@@ -131,6 +131,8 @@ netif_t *netif_remove(netif_t *netif);
 netif_t *netif_first();
 netif_t *netif_next(netif_t *netif);
 void print_netif_list(void);
+
+netif_t* get_netif_accord_ip(ipaddr_t* ip);
 netif_t* is_mac_host(uint8_t* mac);
 netif_t* is_ip_host(ipaddr_t* ip);
 
@@ -144,4 +146,7 @@ int netif_set_mtu(netif_t *netif, int mtu);
 int netif_set_name(netif_t *netif, const char *name);
 int netif_set_mac(netif_t *netif, const uint8_t *mac);
 
+
+int is_local_boradcast(netif_t *netif,ipaddr_t * ip);
+int is_global_boradcast(ipaddr_t* ip);
 #endif

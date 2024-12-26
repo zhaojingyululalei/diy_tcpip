@@ -36,6 +36,7 @@
 #define DBG_EHTER_PRINT
 #define DBG_SOFT_TIMER_PRINT
 #define DBG_ARP_PRITN
+#define DBG_IPV4_PRINT
 
 
 //arp配置

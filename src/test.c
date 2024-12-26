@@ -479,17 +479,55 @@ void test_phnetif(void)
         netif_out(netif, &ip,  pkg);
     }
 
-    while (1)
-    {
-        sleep(1);
-    }
+    
+}
+
+//ipv4 test
+#include "ipv4.h"
+#include "protocal.h"
+void test_ipv4(void)
+{
+    // netif_t *netif = loop_init();
+    // netif_open(netif);
+    // print_netif_list();
+    // netif_activate(netif);
+    netif_t *netif = phnetif_init();
+    netif_open(netif);
+    print_netif_list();
+    netif_activate(netif);
+    ipaddr_t srcip = {
+        .type = IPADDR_V4};
+    char *srcip_buf = "192.168.169.10";
+    ipaddr_s2n(srcip_buf, &srcip);
+
+    ipaddr_t destip = {
+        .type = IPADDR_V4};
+    char *destip_buf = "192.168.169.20";
+    ipaddr_s2n(destip_buf, &destip);
+
+    uint8_t data_buf[2] = {0x55, 0xAA};
+    pkg_t *pkg = package_create(data_buf, 2);
+    ipv4_out(pkg,PROTOCAL_TYPE_ICMPV4,&srcip,&destip);
+    
+    
+    
+    
+    
+    return;
+
 }
 void test_worker(void)
 {
     net_system_init();
     // timer_test();
     net_system_start();
-    test_phnetif();
+    //test_phnetif();
+    test_ipv4();
+    while (1)
+    {
+        sleep(1);
+    }
+
 }
 int main(int agrc, char *argv[])
 {

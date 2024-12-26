@@ -36,8 +36,7 @@ int mac_s2n(uint8_t* mac, const char* mac_str);
 
 uint32_t ipaddr_get_host(ipaddr_t *ip,ipaddr_t *mask);
 uint32_t ipaddr_get_net(ipaddr_t * ip,ipaddr_t *mask);
-int is_local_boradcast(ipaddr_t * ip,ipaddr_t *mask);
-int is_global_boradcast(ipaddr_t* ip);
+
 uint8_t* get_mac_empty(void);
 uint8_t * get_mac_broadcast(void);
 int is_mac_empty(uint8_t* mac);

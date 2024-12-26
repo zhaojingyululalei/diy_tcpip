@@ -9,3 +9,8 @@
 5	5.417736375	VMware_6e:06:0c	VMware_92:68:8e	ARP	42	Who has 192.168.169.20? Tell 192.168.169.10
 6	5.418786534	VMware_92:68:8e	VMware_6e:06:0c	ARP	60	192.168.169.20 is at 00:0c:29:92:68:8e
 
+ip.addr == 192.168.169.10 and not (mdns or icmp)
+
+
+！！！！loop 驱动有问题，以后改
+

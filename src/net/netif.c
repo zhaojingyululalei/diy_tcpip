@@ -134,6 +134,20 @@ void print_netif_list(void)
         current_node = list_node_next(current_node);
     }
 }
+netif_t *get_netif_accord_ip(ipaddr_t *ip)
+{
+    list_node_t *current_node = list_first(&netif_list);
+    while (current_node)
+    {
+        netif_t *netif = list_node_parent(current_node, netif_t, node);
+        if (netif->info.ipaddr.q_addr == ip->q_addr)
+        {
+            return netif;
+        }
+        current_node = current_node->next;
+    }
+    return NULL;
+}
 netif_t *is_mac_host(uint8_t *mac)
 {
     list_t *list = &netif_list;
@@ -339,12 +353,6 @@ int netif_activate(netif_t *netif)
     }
     netif->state = NETIF_ACTIVe;
 
-    //
-    if (!netif->link_ops)
-    {
-        dbg_error("link_ops nerver register\r\n");
-        return -1;
-    }
     // 激活收发线程开始工作
     lock(&netif->locker);
     netif->send_flag = 1;
@@ -357,9 +365,12 @@ int netif_activate(netif_t *netif)
     netif->trecv = recv;
     unlock(&netif->locker);
 
-    // 链路层打开
+    // 链路层打开,loop没有链路层
+    if (netif->link_ops)
+    {
 
-    netif->link_ops->open(netif);
+        netif->link_ops->open(netif);
+    }
 
     return 0;
 }
@@ -465,6 +476,7 @@ int netif_close(netif_t *netif)
 int netif_out(netif_t *netif, ipaddr_t *ip, pkg_t *pkg)
 {
     int ret;
+    // 如果有链路层，以太 wifi等
     if (netif->link_ops)
     {
         ret = netif->link_ops->out(netif, ip, pkg);
@@ -475,7 +487,7 @@ int netif_out(netif_t *netif, ipaddr_t *ip, pkg_t *pkg)
             return ret;
         }
     }
-    else
+    else // 没有链路层，loop或者设置错误
     {
         ret = netif_putpkg(&netif->out_q, pkg, -1);
         if (ret < 0)
@@ -590,4 +602,50 @@ DEFINE_THREAD_FUNC(netif_receive)
     }
     dbg_info("++++++++++++++++++++++++++++++netif recv killed+++++++++++++++++++++\r\n");
     return NULL;
+}
+
+int is_local_boradcast(netif_t *netif, ipaddr_t *ip)
+{
+    if (!ip || !netif)
+    {
+        dbg_error("pram null\r\n");
+        return 0;
+    }
+
+    // 查看网络部分是否相同
+    uint32_t me = ipaddr_get_net(&netif->info.ipaddr, &netif->info.mask);
+    uint32_t him = ipaddr_get_net(ip, &netif->info.mask);
+    if (me != him)
+    {
+        return 0;
+    }
+    // 如果网络部分相同，继续检查主机部分是否全1
+    ipaddr_t *mask = &netif->info.mask;
+    uint32_t host = ipaddr_get_host(ip, mask);
+
+    if (host == ~mask->q_addr)
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+int is_global_boradcast(ipaddr_t *ip)
+{
+    if (!ip)
+    {
+        dbg_error("pram null\r\n");
+        return 0;
+    }
+    ipaddr_t ip_broad = {
+        .type = IPADDR_V4};
+    ipaddr_s2n("255.255.255.255", &ip_broad);
+    if (ip->q_addr == ip_broad.q_addr)
+    {
+        return 1;
+    }
+    return 0;
 }
