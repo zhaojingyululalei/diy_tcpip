@@ -83,5 +83,6 @@ static inline int package_get_cur_pos(pkg_t* package)
 {
     return package->pos;
 }
+uint16_t package_checksum16(pkg_t* pkg, int off,int size, uint32_t pre_sum, int complement) ;
 
 #endif

@@ -20,7 +20,7 @@ static void(ether_close)(struct _netif_t *netif)
 {
     return;
 }
-static int ether_pkg_is_ok(netif_t* netif,ether_header_t *header, int pkg_len)
+static int ether_pkg_is_ok(netif_t *netif, ether_header_t *header, int pkg_len)
 {
     if (pkg_len > sizeof(ether_header_t) + MTU_MAX_SIZE)
     {
@@ -33,8 +33,7 @@ static int ether_pkg_is_ok(netif_t* netif,ether_header_t *header, int pkg_len)
         dbg_warning("ether pkg len so small\r\n");
         return -2;
     }
-    if(memcmp(netif->macaddr,header->dest,MAC_ADDR_ARR_LEN)!=0 
-        && memcmp(get_mac_broadcast(),header->dest,MAC_ADDR_ARR_LEN)!=0)
+    if (memcmp(netif->macaddr, header->dest, MAC_ADDR_ARR_LEN) != 0 && memcmp(get_mac_broadcast(), header->dest, MAC_ADDR_ARR_LEN) != 0)
     {
         dbg_error("ether recv a pkg,dest mac addr wrong\r\n");
         return -3;
@@ -70,31 +69,71 @@ static void ether_dbg_print_pkg(pkg_t *pkg)
 #endif
 }
 #include "ipv4.h"
+#include "arp.h"
+static int update_arp_from_ipv4(netif_t* netif,pkg_t* pkg)
+{
+    if(!netif||!pkg)
+    {
+        return -1;
+    }
+
+    package_integrate_header(pkg,sizeof(ipv4_header_t)+sizeof(ether_header_t));
+    ether_header_t* ether_head = package_data(pkg,1,0);
+    ipv4_header_t* ipv4_head = package_data(pkg,1,sizeof(ether_header_t));
+    ipv4_head_parse_t ipv4_parse_head;
+    parse_ipv4_header(ipv4_head,&ipv4_parse_head);
+    ipv4_show_pkg(&ipv4_parse_head);
+    if(!ipv4_pkg_is_ok(&ipv4_parse_head,ipv4_head))
+    {
+        dbg_warning("ipv4 format not right\r\n");
+        return -2;
+    }
+    ipaddr_t ip = {
+        .type = IPADDR_V4,
+        .q_addr = ipv4_parse_head.src_ip
+    };
+    arp_entry_t *entry = arp_cache_find(&arp_cache_table,&ip);
+    if(entry)
+    {
+        return 0;
+    }
+
+    entry = arp_cache_alloc_entry(&arp_cache_table,0);
+    entry->ip.q_addr = ipv4_parse_head.src_ip;
+    memcpy(entry->mac,ether_head->src,MAC_ADDR_ARR_LEN);
+    entry->tmo = ARP_ENTRY_TMO_STABLE;
+    entry->retry = ARP_ENTRY_RETRY;
+    entry->netif = netif;
+    arp_cache_insert_entry(&arp_cache_table,entry);
+    arp_show_cache_list();
+
+    return 0;
+}
 static int(ether_in)(struct _netif_t *netif, pkg_t *package)
 {
     int ret;
 
     ether_header_t *header = package_data(package, sizeof(ether_header_t), 0);
-    if (ether_pkg_is_ok(netif,header, package->total) < 0)
+    if (ether_pkg_is_ok(netif, header, package->total) < 0)
     {
         dbg_warning("ether pkg problem,can not handle\r\n");
         return -1;
     }
 
-
     ether_dbg_print_pkg(package);
     uint16_t protocal = 0;
     _ntohs(header->protocal, &protocal);
-    // 去掉以太网头
-    ret = package_shrank_front(package, sizeof(ether_header_t));
-    if (ret < 0)
-    {
-        dbg_error("package_shrank_fail\r\n");
-        return ret;
-    }
+
     switch (protocal)
     {
     case PROTOCAL_TYPE_ARP:
+        // 去掉以太网头
+        ret = package_shrank_front(package, sizeof(ether_header_t));
+        if (ret < 0)
+        {
+            dbg_error("package_shrank_fail\r\n");
+            return ret;
+        }
         ret = arp_in(netif, package);
         if (ret < 0)
         {
@@ -103,7 +142,15 @@ static int(ether_in)(struct _netif_t *netif, pkg_t *package)
         }
         break;
     case PROTOCAL_TYPE_IPV4:
-
+        // 如果收到了一个ipv4数据包，有ip有mac可以更新arp表
+        update_arp_from_ipv4(netif,package);
+        // 去掉以太网头
+        ret = package_shrank_front(package, sizeof(ether_header_t));
+        if (ret < 0)
+        {
+            dbg_error("package_shrank_fail\r\n");
+            return ret;
+        }
         ret = ipv4_in(netif, package);
         if (ret < 0)
         {
@@ -162,7 +209,7 @@ int ether_raw_out(netif_t *netif, protocal_type_t type, const uint8_t *mac_dest,
         netif_putpkg(&netif->out_q, pkg, -1);
     }
 }
-static int(ether_out)(struct _netif_t *netif, ipaddr_t *dest,  pkg_t *package)
+static int(ether_out)(struct _netif_t *netif, ipaddr_t *dest, pkg_t *package)
 {
     int ret;
     netif_t *target = is_ip_host(dest);
@@ -183,7 +230,7 @@ static int(ether_out)(struct _netif_t *netif, ipaddr_t *dest,  pkg_t *package)
 
         // 如果是外部ip,
 
-        if (is_local_boradcast(netif,dest) || is_global_boradcast(dest))
+        if (is_local_boradcast(netif, dest) || is_global_boradcast(dest))
         {
             // 如果是广播ip,直接发，不用查看arp缓存
             ret = ether_raw_out(netif, PROTOCAL_TYPE_IPV4, get_mac_broadcast(), package);

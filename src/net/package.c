@@ -86,6 +86,11 @@ int package_collect(pkg_t *package)
     {
         return -3;
     }
+    if(list_count(&package->pkgdb_list) == 0)
+    {
+        dbg_warning("the package has been collected before\r\n");
+        return -4;
+    }
     // lock(&pkg_locker);
     //  先回收数据块
     while (list_count(&package->pkgdb_list) > 0)
@@ -982,4 +987,42 @@ uint8_t *package_data(pkg_t *pkg, int len, int position)
     package_lseek(pkg, pkg->pos); // 数据包头整合后，curk或者pos等会受影响，重新定位
     uint8_t *ret = &pkg->curblk->data[pkg->curblk->offset + pkg->inner_offset];
     return ret;
+}
+
+#include "algrithem.h"
+/**
+ * 从当前位置开始计算校验和
+ * 
+ * @param size 计算多大区域的校验和
+ * @return 16位校验和
+ */
+uint16_t package_checksum16(pkg_t* pkg, int off,int size, uint32_t pre_sum, int complement) {
+    if(!pkg)
+    {
+        dbg_error("param fault:null\r\n");
+        return -1;
+    }
+    package_lseek(pkg,off);
+
+    int remain_size = pkg->total - pkg->pos;
+
+    if(remain_size<size)
+    {
+        dbg_error("checksum,size too large\r\n");
+        return -2;
+    }
+
+    uint32_t sum = pre_sum;
+    uint32_t offset = 0;
+    while (size > 0)
+    {
+        int block_size = PKG_DATA_BLK_SIZE - pkg->curblk->offset - pkg->inner_offset;
+        int check_size = block_size < size?block_size:size;
+        sum = checksum16(offset,&(pkg->curblk->data[pkg->curblk->offset + pkg->inner_offset]),check_size,sum,0);
+        package_lseek(pkg,pkg->pos + check_size);
+        size -=check_size;
+        offset += check_size;
+    }
+    return complement ? (uint16_t)~sum : (uint16_t)sum;
+
 }

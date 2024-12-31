@@ -31,7 +31,7 @@ void parse_ipv4_header(const ipv4_header_t *ip_head, ipv4_head_parse_t *parsed)
     _ntohl(ip_head->dest_ip, &parsed->dest_ip);
 }
 
-static int ipv4_pkg_is_ok(ipv4_head_parse_t *head, ipv4_header_t *ip_head)
+int ipv4_pkg_is_ok(ipv4_head_parse_t *head, ipv4_header_t *ip_head)
 {
     if (head->version != IPV4_HEAD_VERSION)
     {
@@ -90,16 +90,32 @@ static int ipv4_is_match(netif_t *netif, uint32_t dest_ip)
     }
     return 0;
 }
+#include "icmpv4.h"
 static int ipv4_normal_in(netif_t *netif, pkg_t *pkg, ipv4_head_parse_t *parse_head)
 {
+    int ret;
+    ipaddr_t src_ip = {
+        .type = IPADDR_V4,
+        .q_addr = parse_head->src_ip};
     switch (parse_head->protocol)
     {
     case PROTOCAL_TYPE_ICMPV4:
 
+        ret = icmpv4_in(&src_ip, &netif->info.ipaddr, pkg, parse_head->head_len);
+        if (ret < 0)
+        {
+            dbg_warning("icmpv4 in pkg fault\r\n");
+            return ret;
+        }
         break;
     case PROTOCAL_TYPE_UDP:
 
-        break;
+        ret = icmpv4_send_unreach(&netif->info.ipaddr,&src_ip,pkg,ICMPv4_UNREACH_PORT); 
+        if(ret < 0)
+        {
+            dbg_warning("icmpv4_send_unreach fail\r\n");
+            return ret;
+        }
     case PROTOCAL_TYPE_TCP:
 
         break;
@@ -110,7 +126,7 @@ static int ipv4_normal_in(netif_t *netif, pkg_t *pkg, ipv4_head_parse_t *parse_h
     }
     return 0;
 }
-static void ipv4_show_pkg(ipv4_head_parse_t *parse)
+void ipv4_show_pkg(ipv4_head_parse_t *parse)
 {
 #ifdef DBG_IPV4_PRINT
     dbg_info("++++++++++++++++++++show ipv4 header++++++++++++++++\r\n");
@@ -186,19 +202,17 @@ int ipv4_in(netif_t *netif, pkg_t *pkg)
     }
     int ret;
 
+    // 解析包头
     ipv4_header_t *ip_head = (ipv4_header_t *)package_data(pkg, sizeof(ipv4_header_t), 0);
     ipv4_head_parse_t parse_head;
     parse_ipv4_header(ip_head, &parse_head);
 
-    
-
+    // 检测包头格式
     if (!ipv4_pkg_is_ok(&parse_head, ip_head))
     {
         dbg_warning(" a ipv4 pkg is not ok\r\n");
         return -1;
     }
-    dbg_info("++++++++IPV4 in+++++++++++++++++++++++\r\n");
-
     if (pkg->total > parse_head.total_len)
     {
         // ether 最小字节数46，可能自动填充了一些0
@@ -210,6 +224,8 @@ int ipv4_in(netif_t *netif, pkg_t *pkg)
         dbg_warning("recv an ipv4 pkg,dest ip not match\r\n");
         return -2;
     }
+    dbg_info("++++++++IPV4 in+++++++++++++++++++++++\r\n");
+
     ipv4_show_pkg(&parse_head);
 
     // 不分片ipv4数据包 处理
@@ -217,15 +233,15 @@ int ipv4_in(netif_t *netif, pkg_t *pkg)
     return ret;
 }
 
-int ipv4_out(pkg_t* pkg,uint8_t protocal,ipaddr_t* src,ipaddr_t* dest)
+int ipv4_out(pkg_t *pkg, uint8_t protocal, ipaddr_t *src, ipaddr_t *dest)
 {
 
     int ret;
-    package_add_headspace(pkg,sizeof(ipv4_header_t));
-    ipv4_header_t* head = package_data(pkg,sizeof(ipv4_header_t),0);
-    package_memset(pkg,0,0,sizeof(ipv4_header_t));
-    ipv4_head_parse_t parse ;
-    memset(&parse,0,sizeof(ipv4_head_parse_t));
+    package_add_headspace(pkg, sizeof(ipv4_header_t));
+    ipv4_header_t *head = package_data(pkg, sizeof(ipv4_header_t), 0);
+    package_memset(pkg, 0, 0, sizeof(ipv4_header_t));
+    ipv4_head_parse_t parse;
+    memset(&parse, 0, sizeof(ipv4_head_parse_t));
 
     parse.version = IPV4_HEAD_VERSION;
     parse.head_len = sizeof(ipv4_header_t);
@@ -237,43 +253,48 @@ int ipv4_out(pkg_t* pkg,uint8_t protocal,ipaddr_t* src,ipaddr_t* dest)
     parse.src_ip = src->q_addr;
     parse.dest_ip = dest->q_addr;
 
-    ipv4_set_header(&parse,head);
-    //计算校验值
-    uint16_t check_ret = checksum16(0, (uint16_t *)head, sizeof(ipv4_header_t), 0, 1);
-    //这里直接赋值，不要大小端转换  解析的时候，checksum转不转换都行
+    ipv4_set_header(&parse, head);
+    // 计算校验值
+    // uint16_t check_ret = checksum16(0, (uint16_t *)head, sizeof(ipv4_header_t), 0, 1);
+
+    uint16_t check_ret = package_checksum16(pkg, 0, sizeof(ipv4_header_t), 0, 1);
+    // 这里直接赋值，不要大小端转换  解析的时候，checksum转不转换都行
     head->h_checksum = check_ret;
 
-
-    //选择从哪块网卡发出数据包
-    netif_t* out_card = NULL;
+    // 选择从哪块网卡发出数据包
+    // 这块内容后续由路由表替代，路由表会决定数据包从哪个接口发出
+    netif_t *out_card = NULL;
     ipaddr_t loop_ip;
-    ipaddr_s2n(NETIF_LOOP_IPADDR,&loop_ip);
-    //目的地址是回环接口，没有链路层，不用从物理网卡发出
-    if(dest->q_addr == loop_ip.q_addr)
+    ipaddr_s2n(NETIF_LOOP_IPADDR, &loop_ip);
+    // 目的地址是回环接口，没有链路层，不用从物理网卡发出
+    if (dest->q_addr == loop_ip.q_addr)
     {
-        //根据dest ip找到网卡
+        // 根据dest ip找到网卡
         out_card = get_netif_accord_ip(dest);
-        if(!out_card)
+        if (!out_card)
         {
             dbg_warning("loop not open,can not send pkg from loop\r\n");
             package_collect(pkg);
             return -1;
         }
-        else{
-            netif_out(out_card,dest,pkg);
+        else
+        {
+            netif_out(out_card, dest, pkg);
         }
     }
-    else{
-        //根据src ip找物理网卡
+    else
+    {
+        // 根据src ip找物理网卡
         out_card = get_netif_accord_ip(src);
-        if(!out_card)
+        if (!out_card)
         {
             dbg_warning("src_ip relate netif not open,can not send pkg from loop\r\n");
             package_collect(pkg);
             return -1;
         }
-        else{
-            netif_out(out_card,dest,pkg);
+        else
+        {
+            netif_out(out_card, dest, pkg);
         }
     }
     return 0;

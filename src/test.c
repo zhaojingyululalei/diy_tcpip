@@ -316,7 +316,8 @@ void test_create_and_add_header()
 
 void test_write_read_memory_ops()
 {
-    pkg_t* pkg = package_alloc(512);
+    pkg_t* pkg = package_alloc(131);
+    package_show_info(pkg);
     package_memset(pkg,0,0,pkg->total);
     package_write_pos(pkg,"hello",5,0);
     package_write_pos(pkg,"world",5,128);
@@ -507,7 +508,7 @@ void test_ipv4(void)
 
     uint8_t data_buf[2] = {0x55, 0xAA};
     pkg_t *pkg = package_create(data_buf, 2);
-    ipv4_out(pkg,PROTOCAL_TYPE_ICMPV4,&srcip,&destip);
+    //ipv4_out(pkg,PROTOCAL_TYPE_ICMPV4,&srcip,&destip);
     
     
     
@@ -536,7 +537,7 @@ int main(int agrc, char *argv[])
     //   test_locks();
     //   test_semaphores();
     //  test_mempool();
-    // test_package();
+     //test_package();
     //  test_ipaddr();
     // timer_test();
     test_worker();

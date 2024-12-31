@@ -46,6 +46,8 @@ typedef struct _ipv4_head_parse_t
     uint32_t src_ip;          // 源IP地址 (主机字节序)
     uint32_t dest_ip;         // 目标IP地址 (主机字节序)
 } ipv4_head_parse_t;
+void ipv4_show_pkg(ipv4_head_parse_t *parse);
+int ipv4_pkg_is_ok(ipv4_head_parse_t *head, ipv4_header_t *ip_head);
 void ipv4_init(void);
 void parse_ipv4_header(const ipv4_header_t *ip_head, ipv4_head_parse_t *parsed);
 void ipv4_set_header(const ipv4_head_parse_t* parsed, ipv4_header_t* head) ;

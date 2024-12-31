@@ -6,6 +6,7 @@
 #include "networker.h"
 #include "arp.h"
 #include "ipv4.h"
+#include "icmpv4.h"
 threadpool_t netthread_pool;
 
 /**
@@ -31,6 +32,7 @@ void net_system_init(void)
     ether_init();
     arp_init();
     ipv4_init();
+    icmpv4_init();
     return;
     
 }
