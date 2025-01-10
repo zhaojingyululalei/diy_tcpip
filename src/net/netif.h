@@ -40,7 +40,7 @@ typedef struct _netif_ops_t
     // len:要发送的长度  return 成功发送的数据长度
     int (*send)(struct _netif_t *netif, const uint8_t *buf, int len);
     // len:buf缓冲区的长度  return 接收到的数据长度
-    int (*receive)(struct _netif_t *netif, uint8_t *buf, int len);
+    int (*receive)(struct _netif_t *netif, uint8_t **buf);
 } netif_ops_t;
 
 /**

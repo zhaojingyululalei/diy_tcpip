@@ -86,7 +86,7 @@ int package_collect(pkg_t *package)
     {
         return -3;
     }
-    if(list_count(&package->pkgdb_list) == 0)
+    if (list_count(&package->pkgdb_list) == 0)
     {
         dbg_warning("the package has been collected before\r\n");
         return -4;
@@ -142,6 +142,7 @@ pkg_t *package_alloc(int size)
         if (remain_size < PKG_DATA_BLK_SIZE)
         {
             package->inner_offset = remain_size;
+            dblk->size = remain_size;
             break;
         }
         remain_size -= PKG_DATA_BLK_SIZE;
@@ -617,7 +618,14 @@ int package_join(pkg_t *from, pkg_t *to)
     list_t *list_f = &from->pkgdb_list;
     list_t *list_to = &to->pkgdb_list;
     list_join(list_f, list_to);
-
+    from->total = 1;
+    pkg_dblk_t *dblk = mempool_alloc_blk(&pkg_datapool, -1);
+    memset(dblk, 0, sizeof(pkg_dblk_t));
+    dblk->size = PKG_DATA_BLK_SIZE;
+    list_insert_last(&from->pkgdb_list, &dblk->node);
+    from->curblk = dblk;
+    from->inner_offset = 1;
+    from->pos = 1;
     // 清理 from 的内容
     if (package_collect(from) != 0)
     {
@@ -627,12 +635,12 @@ int package_join(pkg_t *from, pkg_t *to)
     }
 
     // 整合目标包的数据块
-    pkg_dblk_t *curblk = package_get_first_datablk(to);
-    while (curblk)
-    {
-        package_integrate_two_continue_blk(to, curblk);
-        curblk = package_get_next_datablk(curblk);
-    }
+    // pkg_dblk_t *curblk = package_get_first_datablk(to);
+    // while (curblk)
+    // {
+    //     package_integrate_two_continue_blk(to, curblk);
+    //     curblk = package_get_next_datablk(curblk);
+    // }
 
     // un//lock(&pkg_locker);
     return 0;
@@ -684,8 +692,8 @@ int package_write(pkg_t *package, const uint8_t *buf, int len)
             blk = package_get_next_datablk(blk);
             if (!blk)
             {
-                package->curblk = NULL;
-                package->inner_offset = 0;
+                // package->curblk = NULL;
+                // package->inner_offset = 0;
                 break;
             }
             package->curblk = blk;
@@ -745,8 +753,8 @@ int package_read(pkg_t *package, uint8_t *buf, int len)
             blk = package_get_next_datablk(blk);
             if (!blk)
             {
-                package->curblk = NULL;
-                package->inner_offset = 0;
+                // package->curblk = NULL;
+                // package->inner_offset = 0;
                 break;
             }
             package->curblk = blk;
@@ -811,6 +819,7 @@ int package_read_pos(pkg_t *package, uint8_t *buf, int len, int position)
 }
 int package_lseek(pkg_t *package, int offset)
 {
+    
     // lock(&pkg_locker);
     if (package == NULL || offset < 0 || offset > package->total)
     {
@@ -833,6 +842,19 @@ int package_lseek(pkg_t *package, int offset)
         }
         remain_size -= blk->size;
         blk = package_get_next_datablk(blk);
+        if (!blk)
+        {
+            if (offset == package->total && remain_size == 0)
+            {
+                package->curblk = NULL;
+                package->inner_offset = 0;
+                break;
+            }
+            else{
+                dbg_error("pkg data blk alloc fail\r\n");
+                return -2;
+            }
+        }
         package->inner_offset = 0;
     }
 
@@ -854,9 +876,9 @@ int package_memcpy(pkg_t *dest_pkg, int dest_offset, pkg_t *src_pkg, int src_off
 
     uint8_t *buf = malloc(len);
 
-    ret = package_read(src_pkg, buf, PKG_DATA_BLK_SIZE);
+    ret = package_read(src_pkg, buf, len);
     package_write(dest_pkg, buf, ret);
-
+    free(buf);
     // un//lock(&pkg_locker);
 
     return 0;
@@ -949,15 +971,22 @@ int package_copy(pkg_t *dest_pkg, pkg_t *src_pkg)
 }
 void package_print(pkg_t *pkg)
 {
+    int count = 0;
     uint8_t *rbuf = malloc(pkg->total);
     package_lseek(pkg, 0);
     package_read(pkg, rbuf, pkg->total);
     for (int i = 0; i < pkg->total; ++i)
     {
 
-        dbg_info("%x ", rbuf[i]);
+        if (i % 10 == 0)
+        {
+            dbg_info("\r\n");
+        }
+        dbg_info("%02x ", rbuf[i]);
+        count++;
     }
     dbg_info("\r\n");
+    dbg_info("sum:%d byte\r\n", count);
     free(rbuf);
 }
 
@@ -965,7 +994,7 @@ void package_print(pkg_t *pkg)
 uint8_t *package_data(pkg_t *pkg, int len, int position)
 {
     int x;
-    if (!pkg || !pkg->curblk)
+    if (!pkg )
     {
         return NULL; // 检查空指针情况
     }
@@ -992,21 +1021,28 @@ uint8_t *package_data(pkg_t *pkg, int len, int position)
 #include "algrithem.h"
 /**
  * 从当前位置开始计算校验和
- * 
+ *
  * @param size 计算多大区域的校验和
  * @return 16位校验和
  */
-uint16_t package_checksum16(pkg_t* pkg, int off,int size, uint32_t pre_sum, int complement) {
-    if(!pkg)
+uint16_t package_checksum16(pkg_t *pkg, int off, int size, uint32_t pre_sum, int complement)
+{
+    if (!pkg || !pkg->curblk || !pkg->curblk->data || off < 0 || size <= 0)
     {
-        dbg_error("param fault:null\r\n");
+        dbg_error("param fault: invalid input\r\n");
         return -1;
     }
-    package_lseek(pkg,off);
+    if (off >= pkg->total)
+    {
+        dbg_error("param fault: offset out of range\r\n");
+        return -1;
+    }
+
+    // 设置初始位置
+    package_lseek(pkg, off);
 
     int remain_size = pkg->total - pkg->pos;
-
-    if(remain_size<size)
+    if (remain_size < size)
     {
         dbg_error("checksum,size too large\r\n");
         return -2;
@@ -1014,15 +1050,40 @@ uint16_t package_checksum16(pkg_t* pkg, int off,int size, uint32_t pre_sum, int 
 
     uint32_t sum = pre_sum;
     uint32_t offset = 0;
+
     while (size > 0)
     {
-        int block_size = PKG_DATA_BLK_SIZE - pkg->curblk->offset - pkg->inner_offset;
-        int check_size = block_size < size?block_size:size;
-        sum = checksum16(offset,&(pkg->curblk->data[pkg->curblk->offset + pkg->inner_offset]),check_size,sum,0);
-        package_lseek(pkg,pkg->pos + check_size);
-        size -=check_size;
+        if (!pkg->curblk || !pkg->curblk->data)
+        {
+            dbg_error("null block or data\r\n");
+            return -3;
+        }
+
+        int block_size = pkg->curblk->size - pkg->inner_offset;
+        if (block_size <= 0)
+        {
+            dbg_error("invalid block size\r\n");
+            return -3;
+        }
+
+        int check_size = block_size < size ? block_size : size;
+
+        // 检查访问范围
+        if (pkg->inner_offset + check_size > pkg->curblk->size)
+        {
+            dbg_error("block access out of bounds\r\n");
+            return -3;
+        }
+
+        // 计算校验和
+        sum = checksum16(offset, &(pkg->curblk->data[pkg->curblk->offset + pkg->inner_offset]), check_size, sum, 0);
+
+        // 移动位置
+        package_lseek(pkg, pkg->pos + check_size);
+
+        size -= check_size;
         offset += check_size;
     }
-    return complement ? (uint16_t)~sum : (uint16_t)sum;
 
+    return complement ? (uint16_t)~sum : (uint16_t)sum;
 }

@@ -37,6 +37,7 @@
 #define DBG_SOFT_TIMER_PRINT
 #define DBG_ARP_PRITN
 #define DBG_IPV4_PRINT
+#define DBG_IPV4_FRAG_PRINT
 
 
 //arp配置
@@ -47,5 +48,8 @@
 #define ARP_ENTRY_TMO_STABLE    (20*60)    //表项更新周期
 #define ARP_ENTRY_TMO_RESOLVING 3    //发起更新命令后，限时3s完成
 #define ARP_ENTRY_RETRY 5           //给5次机会，还没完成就删除表项
+
+#define IPV4_FRAG_TIMER_SCAN    1   //周期性扫描分片列表,长时间组不成完整包就丢弃
+#define IPV4_FRAG_TMO           5   //规定时间内，没有组成完整分片，就释放掉
 
 #endif

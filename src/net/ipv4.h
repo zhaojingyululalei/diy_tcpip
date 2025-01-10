@@ -12,6 +12,7 @@
 #define IPV4_HEAD_FLAGS_NOT_FRAGMENT    (1<<1)
 #define IPV4_HEAD_FLAGS_RESERVED_BIT    (1<<2)
 #define IPV4_HEAD_TTL_DEFAULT   64
+#define IPV4_FRAG_MAX       16
 #pragma pack(1)
 /*网络序，数据包中的东西统一使用网络序*/
 typedef struct _ipv4_header_t
@@ -30,6 +31,8 @@ typedef struct _ipv4_header_t
 }ipv4_header_t;
 
 #pragma pack(0)
+
+
 typedef struct _ipv4_head_parse_t
 {
     uint8_t version;          // 版本号
@@ -53,4 +56,23 @@ void parse_ipv4_header(const ipv4_header_t *ip_head, ipv4_head_parse_t *parsed);
 void ipv4_set_header(const ipv4_head_parse_t* parsed, ipv4_header_t* head) ;
 int ipv4_in(netif_t* netif,pkg_t* pkg);
 int ipv4_out(pkg_t* pkg,uint8_t protocal,ipaddr_t* src,ipaddr_t* dest);
+
+/*ip数据包分片结构*/
+typedef struct _ip_frag_t
+{
+    ipaddr_t ip;
+    uint16_t id;
+    int tmo;      //tmo/period,每次扫描，tmo-1
+    list_t frag_list; //分片数据包
+
+    list_node_t node;
+}ip_frag_t;
+
+void ipv4_frag_list_print(void);
+void ipv4_frag_free(ip_frag_t* frag);
+ip_frag_t* ipv4_frag_alloc(void);
+ip_frag_t *ipv4_frag_find(ipaddr_t *ip, uint16_t id);
+int ipv4_frag_insert_pkg(ip_frag_t* frag,pkg_t* pkg,ipv4_head_parse_t* parse);
+int ipv4_frag_is_all_arrived(ip_frag_t* frag);
+pkg_t* ipv4_frag_join_pkg(ip_frag_t* frag);
 #endif

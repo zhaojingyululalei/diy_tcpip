@@ -87,13 +87,13 @@ int phnetif_send(netif_t *netif, const uint8_t *buf, int len)
     return ret;
 }
 /*物理网卡驱动*/
-int phnetif_receive(netif_t *netif, const uint8_t **buf, int len)
+int phnetif_receive(netif_t *netif, const uint8_t **buf)
 {
     int ret;
     phnetif_drive_data_t *exdata = (phnetif_drive_data_t *)netif->ex_data;
     uint8_t *rbuf = NULL;
     ret = pcap_recv_pkg(exdata->handler, &rbuf);
-    int cpy_size = ret > len ? len : ret;
+    int cpy_size = ret ;
     *buf = malloc(cpy_size);
     memcpy(*buf, rbuf, cpy_size);
 #ifdef DBG_THREAD_PRINT

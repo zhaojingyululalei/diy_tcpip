@@ -78,8 +78,8 @@ static int update_arp_from_ipv4(netif_t* netif,pkg_t* pkg)
     }
 
     package_integrate_header(pkg,sizeof(ipv4_header_t)+sizeof(ether_header_t));
-    ether_header_t* ether_head = package_data(pkg,1,0);
-    ipv4_header_t* ipv4_head = package_data(pkg,1,sizeof(ether_header_t));
+    ether_header_t* ether_head = package_data(pkg,sizeof(ether_header_t),0);
+    ipv4_header_t* ipv4_head = package_data(pkg,sizeof(ether_header_t)+sizeof(ipv4_header_t),sizeof(ether_header_t));
     ipv4_head_parse_t ipv4_parse_head;
     parse_ipv4_header(ipv4_head,&ipv4_parse_head);
     ipv4_show_pkg(&ipv4_parse_head);
@@ -92,6 +92,11 @@ static int update_arp_from_ipv4(netif_t* netif,pkg_t* pkg)
         .type = IPADDR_V4,
         .q_addr = ipv4_parse_head.src_ip
     };
+    //如果源ip不和自己在同一网段，不更新arp
+    if(ipaddr_get_net(&ip,&netif->info.mask)!=ipaddr_get_net(&netif->info.ipaddr,&netif->info.mask))
+    {
+        return -3;
+    }
     arp_entry_t *entry = arp_cache_find(&arp_cache_table,&ip);
     if(entry)
     {

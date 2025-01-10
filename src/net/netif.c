@@ -547,7 +547,7 @@ int netif_receive_simulate(netif_t *netif)
     }
     int ret;
     uint8_t *buf = NULL;
-    ret = netif->ops->receive(netif, &buf, PKG_DATA_BLK_SIZE); // 网卡驱动
+    ret = netif->ops->receive(netif, &buf); // 网卡驱动
     if (ret <= 0)
     {
         free(buf);
